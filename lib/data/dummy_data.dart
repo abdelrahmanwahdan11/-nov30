@@ -36,6 +36,36 @@ final dummyPods = <Pod>[
     isOnline: false,
     imageUrl: 'https://images.unsplash.com/photo-1470246973918-29a93221c455',
   ),
+  Pod(
+    id: 'pod-4',
+    name: 'Azure Drop',
+    location: 'West Wing',
+    waterLevelPercent: 0.9,
+    humidityPercent: 0.58,
+    waterTemperature: 19,
+    isOnline: true,
+    imageUrl: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=800&q=60',
+  ),
+  Pod(
+    id: 'pod-5',
+    name: 'Polar Dew',
+    location: 'Cooling Lab',
+    waterLevelPercent: 0.21,
+    humidityPercent: 0.35,
+    waterTemperature: 16,
+    isOnline: true,
+    imageUrl: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=900&q=60',
+  ),
+  Pod(
+    id: 'pod-6',
+    name: 'Lagoon Pulse',
+    location: 'Greenhouse 02',
+    waterLevelPercent: 0.62,
+    humidityPercent: 0.6,
+    waterTemperature: 24,
+    isOnline: false,
+    imageUrl: 'https://images.unsplash.com/photo-1470246973918-29a93221c455?auto=format&fit=crop&w=900&q=60',
+  ),
 ];
 
 final dummyRules = <ScheduleRule>[
@@ -53,18 +83,30 @@ final dummyRules = <ScheduleRule>[
     durationMinutes: 20,
     daysOfWeek: const [2, 4, 6],
   ),
+  ScheduleRule(
+    id: 'rule-3',
+    podId: 'pod-5',
+    startTime: const TimeOfDay(hour: 5, minute: 45),
+    durationMinutes: 25,
+    daysOfWeek: const [1, 2, 3, 4, 5],
+  ),
 ];
 
-final dummyLogs = List.generate(12, (index) {
+final dummyLogs = List.generate(16, (index) {
   final pod = dummyPods[index % dummyPods.length];
+  final isAlert = index % 3 == 0;
+  final messages = [
+    'Automatic refill completed',
+    'Low water detected',
+    'Humidity optimized for ${pod.name}',
+    'Pump cycle finished',
+  ];
   return LogEntry(
     id: 'log-$index',
     podId: pod.id,
-    timestamp: DateTime.now().subtract(Duration(hours: index * 5)),
-    message: index.isEven
-        ? 'Automatic refill completed'
-        : 'Humidity optimized for ${pod.name}',
-    type: index.isEven ? 'info' : 'alert',
+    timestamp: DateTime.now().subtract(Duration(hours: index * 4)),
+    message: messages[index % messages.length],
+    type: isAlert ? 'alert' : 'info',
   );
 });
 

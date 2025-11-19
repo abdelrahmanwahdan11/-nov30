@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:iconly/iconly.dart';
 
+import '../../l10n/app_localizations.dart';
+
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
 
@@ -31,8 +33,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Sign up')),
+      appBar: AppBar(title: Text(strings.t('signup.title'))),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -41,13 +44,13 @@ class _SignUpPageState extends State<SignUpPage> {
             children: [
               TextFormField(
                 controller: nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
+                decoration: InputDecoration(labelText: strings.t('signup.name')),
                 validator: (value) => value!.isEmpty ? 'Required' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
+                decoration: InputDecoration(labelText: strings.t('signup.email')),
                 validator: (value) => value!.contains('@') ? null : 'Invalid',
               ),
               const SizedBox(height: 12),
@@ -56,7 +59,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 obscureText: !showPassword,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  labelText: 'Password',
+                  labelText: strings.t('signup.password'),
                   suffixIcon: IconButton(
                     icon: Icon(showPassword ? IconlyBold.show : IconlyLight.show),
                     onPressed: () => setState(() => showPassword = !showPassword),
@@ -68,7 +71,7 @@ class _SignUpPageState extends State<SignUpPage> {
               TextFormField(
                 controller: confirmController,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Confirm password'),
+                decoration: InputDecoration(labelText: strings.t('signup.confirm')),
                 validator: (value) => value == passwordController.text ? null : 'Mismatch',
               ),
               const SizedBox(height: 8),
@@ -90,7 +93,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     Navigator.pushNamed(context, '/auth/verify');
                   }
                 },
-                child: const Text('Create account'),
+                child: Text(strings.t('signup.create')),
               ),
             ],
           ),

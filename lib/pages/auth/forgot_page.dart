@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
 
@@ -12,20 +14,21 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Forgot password')),
+      appBar: AppBar(title: Text(strings.t('forgot.title'))),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
             TextField(
               controller: controller,
-              decoration: const InputDecoration(labelText: 'Email'),
+              decoration: InputDecoration(labelText: strings.t('signup.email')),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Send reset link'),
+              child: Text(strings.t('forgot.submit')),
             ),
           ],
         ),

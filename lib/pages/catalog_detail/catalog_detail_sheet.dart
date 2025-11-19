@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/pod.dart';
 import '../../widgets/ai_info_button.dart';
 
@@ -54,6 +55,7 @@ class _CatalogDetailSheetState extends State<CatalogDetailSheet> with SingleTick
 
   Widget _buildFront() {
     final pod = widget.pod;
+    final strings = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -73,7 +75,10 @@ class _CatalogDetailSheetState extends State<CatalogDetailSheet> with SingleTick
           Text(pod.location),
           const SizedBox(height: 12),
           const AiInfoButton(),
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(strings.t('common.close')),
+          ),
         ],
       ),
     );
@@ -81,6 +86,7 @@ class _CatalogDetailSheetState extends State<CatalogDetailSheet> with SingleTick
 
   Widget _buildBack() {
     final pod = widget.pod;
+    final strings = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -91,12 +97,50 @@ class _CatalogDetailSheetState extends State<CatalogDetailSheet> with SingleTick
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('${(pod.waterLevelPercent * 100).toStringAsFixed(0)}% water'),
-          Text('Humidity ${(pod.humidityPercent * 100).toStringAsFixed(0)}%'),
-          Text('Temperature ${pod.waterTemperature}°C'),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _MetricChip(
+                label: strings.t('catalog.filters.status'),
+                value: '${(pod.waterLevelPercent * 100).toStringAsFixed(0)}%',
+              ),
+              _MetricChip(
+                label: strings.t('dashboard.metrics.humidity'),
+                value: '${(pod.humidityPercent * 100).toStringAsFixed(0)}%',
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _MetricChip(
+            label: strings.t('dashboard.metrics.temperature'),
+            value: '${pod.waterTemperature}°C',
+          ),
           const SizedBox(height: 12),
           const AiInfoButton(),
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(strings.t('common.close')),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricChip extends StatelessWidget {
+  const _MetricChip({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      label: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(value, style: Theme.of(context).textTheme.titleMedium),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
     );

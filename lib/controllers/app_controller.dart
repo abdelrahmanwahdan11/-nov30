@@ -11,16 +11,19 @@ class AppController extends ChangeNotifier {
   static const _themeKey = 'theme_mode';
   static const _colorKey = 'primary_color';
   static const _localeKey = 'locale';
+  static const _alertsKey = 'alerts_enabled';
 
   ThemeMode _themeMode = ThemeMode.system;
   Color _primaryColor = const Color(0xFF909D92);
   Locale _locale = const Locale('en');
   bool _initialized = false;
+  bool _alertsEnabled = true;
 
   ThemeMode get themeMode => _themeMode;
   Color get primaryColor => _primaryColor;
   Locale get locale => _locale;
   bool get initialized => _initialized;
+  bool get alertsEnabled => _alertsEnabled;
 
   Future<void> _init() async {
     final prefs = await SharedPreferences.getInstance();
@@ -33,6 +36,7 @@ class AppController extends ChangeNotifier {
     if (localeCode != null) {
       _locale = Locale(localeCode);
     }
+    _alertsEnabled = prefs.getBool(_alertsKey) ?? true;
     _initialized = true;
     notifyListeners();
   }
@@ -56,5 +60,25 @@ class AppController extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_localeKey, locale.languageCode);
+  }
+
+  Future<void> updateAlerts(bool value) async {
+    _alertsEnabled = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_alertsKey, value);
+  }
+
+  Future<void> clearPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_themeKey);
+    await prefs.remove(_colorKey);
+    await prefs.remove(_localeKey);
+    await prefs.remove(_alertsKey);
+    _themeMode = ThemeMode.system;
+    _primaryColor = const Color(0xFF909D92);
+    _locale = const Locale('en');
+    _alertsEnabled = true;
+    notifyListeners();
   }
 }

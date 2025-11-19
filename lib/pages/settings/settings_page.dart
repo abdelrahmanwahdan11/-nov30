@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:iconly/iconly.dart';
 
 import '../../controllers/app_controller.dart';
+import '../../l10n/app_localizations.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key, required this.appController});
@@ -10,6 +11,7 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final colors = [
       const Color(0xFF909D92),
       const Color(0xFF7AA095),
@@ -24,7 +26,7 @@ class SettingsPage extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(IconlyLight.document),
-              title: const Text('Language'),
+              title: Text(strings.t('settings.language')),
               trailing: DropdownButton<Locale>(
                 value: appController.locale,
                 onChanged: (locale) {
@@ -32,13 +34,13 @@ class SettingsPage extends StatelessWidget {
                 },
                 items: const [
                   DropdownMenuItem(value: Locale('en'), child: Text('English')),
-                  DropdownMenuItem(value: Locale('ar'), child: Text('Arabic')),
+                  DropdownMenuItem(value: Locale('ar'), child: Text('العربية')),
                 ],
               ),
             ),
             ListTile(
               leading: const Icon(IconlyLight.show),
-              title: const Text('Theme'),
+              title: Text(strings.t('settings.theme')),
               trailing: DropdownButton<ThemeMode>(
                 value: appController.themeMode,
                 onChanged: (mode) {
@@ -52,7 +54,7 @@ class SettingsPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            const Text('Primary color'),
+            Text(strings.t('settings.color')),
             Wrap(
               spacing: 8,
               children: colors
@@ -77,13 +79,21 @@ class SettingsPage extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             SwitchListTile(
-              title: const Text('Alert sounds'),
-              value: true,
-              onChanged: (value) {},
+              title: Text(strings.t('settings.alerts')),
+              value: appController.alertsEnabled,
+              onChanged: appController.updateAlerts,
             ),
-            ElevatedButton(
-              onPressed: () {},
-              child: const Text('Clear local data'),
+            ElevatedButton.icon(
+              onPressed: () async {
+                await appController.clearPreferences();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(strings.t('settings.cleared'))),
+                  );
+                }
+              },
+              icon: const Icon(IconlyLight.delete),
+              label: Text(strings.t('settings.clear')),
             ),
           ],
         );

@@ -16,17 +16,17 @@ class _OnboardingPageState extends State<OnboardingPage> {
   int currentIndex = 0;
   Timer? timer;
 
-  final pages = const [
-    'Monitor pods anywhere',
-    'Balance humidity intelligently',
-    'Automate irrigation schedules',
+  final pageKeys = const [
+    'onboarding.story1',
+    'onboarding.story2',
+    'onboarding.story3',
   ];
 
   @override
   void initState() {
     super.initState();
     timer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      final next = (currentIndex + 1) % pages.length;
+      final next = (currentIndex + 1) % pageKeys.length;
       controller.animateToPage(
         next,
         duration: const Duration(milliseconds: 600),
@@ -67,7 +67,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 child: PageView.builder(
                   controller: controller,
                   onPageChanged: (index) => setState(() => currentIndex = index),
-                  itemCount: pages.length,
+                  itemCount: pageKeys.length,
                   itemBuilder: (context, index) {
                     return AnimatedOpacity(
                       duration: const Duration(milliseconds: 500),
@@ -88,7 +88,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                             ),
                             const SizedBox(height: 32),
                             Text(
-                              pages[index],
+                              strings.t(pageKeys[index]),
                               textAlign: TextAlign.center,
                               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                     color: Colors.white,
@@ -105,7 +105,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
-                  pages.length,
+                  pageKeys.length,
                   (index) => AnimatedContainer(
                     duration: const Duration(milliseconds: 400),
                     height: 8,
@@ -129,7 +129,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     ),
                     ElevatedButton(
                       onPressed: () {
-                        final next = (currentIndex + 1).clamp(0, pages.length - 1);
+                        final next = (currentIndex + 1).clamp(0, pageKeys.length - 1);
                         if (next == currentIndex) {
                           Navigator.pushReplacementNamed(context, '/auth/login');
                         } else {

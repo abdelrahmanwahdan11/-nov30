@@ -20,6 +20,7 @@ class Pod {
   final String imageUrl;
 
   Pod copyWith({
+    String? id,
     String? name,
     String? location,
     double? waterLevelPercent,
@@ -29,7 +30,7 @@ class Pod {
     String? imageUrl,
   }) {
     return Pod(
-      id: id,
+      id: id ?? this.id,
       name: name ?? this.name,
       location: location ?? this.location,
       waterLevelPercent: waterLevelPercent ?? this.waterLevelPercent,

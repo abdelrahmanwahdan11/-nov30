@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:iconly/iconly.dart';
 
 import '../../controllers/analytics_controller.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/analytics_point.dart';
+import '../../widgets/glass_container.dart';
 
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
@@ -15,33 +18,86 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Analytics')),
-      body: Column(
-        children: [
-          ToggleButtons(
-            isSelected: [
-              controller.currentTab == 'daily',
-              controller.currentTab == 'weekly',
-              controller.currentTab == 'monthly',
-            ],
-            onPressed: (index) {
-              final tabs = ['daily', 'weekly', 'monthly'];
-              setState(() => controller.selectTab(tabs[index]));
-            },
-            children: const [Text('Daily'), Text('Weekly'), Text('Monthly')],
-          ),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
-              child: _Chart(
-                key: ValueKey(controller.currentTab),
-                points: _currentPoints(),
-                color: Theme.of(context).colorScheme.primary,
+      appBar: AppBar(title: Text(strings.t('analytics.title'))),
+      body: AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) {
+          final points = _currentPoints();
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: ToggleButtons(
+                  isSelected: [
+                    controller.currentTab == 'daily',
+                    controller.currentTab == 'weekly',
+                    controller.currentTab == 'monthly',
+                  ],
+                  onPressed: (index) {
+                    final tabs = ['daily', 'weekly', 'monthly'];
+                    controller.selectTab(tabs[index]);
+                  },
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(strings.t('analytics.daily')),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(strings.t('analytics.weekly')),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(strings.t('analytics.monthly')),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
-        ],
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: GlassContainer(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: IconButton(
+                              icon: const Icon(IconlyLight.info_square),
+                              onPressed: () {},
+                            ),
+                          ),
+                          Expanded(
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 400),
+                              child: _Chart(
+                                key: ValueKey(controller.currentTab),
+                                points: points,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _SummaryTile(label: 'Min', value: _min(points).toStringAsFixed(1)),
+                              _SummaryTile(label: 'Avg', value: _avg(points).toStringAsFixed(1)),
+                              _SummaryTile(label: 'Max', value: _max(points).toStringAsFixed(1)),
+                            ],
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -56,6 +112,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         return controller.dailyStats;
     }
   }
+
+  double _min(List<AnalyticsPoint> points) =>
+      points.isEmpty ? 0 : points.map((e) => e.value).reduce((a, b) => a < b ? a : b);
+  double _max(List<AnalyticsPoint> points) =>
+      points.isEmpty ? 0 : points.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+  double _avg(List<AnalyticsPoint> points) =>
+      points.isEmpty ? 0 : points.map((e) => e.value).reduce((a, b) => a + b) / points.length;
 }
 
 class _Chart extends StatelessWidget {
@@ -67,7 +130,7 @@ class _Chart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(8),
       child: CustomPaint(
         painter: _ChartPainter(points, color),
         child: Container(),
@@ -106,4 +169,21 @@ class _ChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ChartPainter oldDelegate) => oldDelegate.points != points;
+}
+
+class _SummaryTile extends StatelessWidget {
+  const _SummaryTile({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(value, style: Theme.of(context).textTheme.titleMedium),
+        Text(label),
+      ],
+    );
+  }
 }

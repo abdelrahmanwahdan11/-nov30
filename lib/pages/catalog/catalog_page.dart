@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:iconly/iconly.dart';
 
 import '../../controllers/catalog_controller.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/pod.dart';
 import '../../widgets/ai_info_button.dart';
 import '../../widgets/glass_container.dart';
@@ -40,9 +41,10 @@ class _CatalogPageState extends State<CatalogPage> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Catalog'),
+        title: Text(strings.t('catalog.title')),
         actions: [
           IconButton(
             icon: const Icon(IconlyLight.search),
@@ -59,7 +61,7 @@ class _CatalogPageState extends State<CatalogPage> {
             padding: const EdgeInsets.all(16),
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Search pods',
+                hintText: strings.t('catalog.search_hint'),
                 prefixIcon: const Icon(IconlyLight.search),
                 filled: true,
                 fillColor: Theme.of(context).cardColor,
@@ -71,45 +73,70 @@ class _CatalogPageState extends State<CatalogPage> {
               onChanged: controller.applySearch,
             ),
           ),
+          _Filters(controller: controller, strings: strings),
           Expanded(
             child: ValueListenableBuilder<List<Pod>>(
               valueListenable: controller.items,
               builder: (context, pods, child) {
-                return GridView.builder(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.8,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
-                  itemCount: pods.length,
-                  itemBuilder: (context, index) {
-                    final pod = pods[index];
-                    return Hero(
-                      tag: pod.id,
-                      child: GlassContainer(
-                        onTap: () => showDialog(
-                          context: context,
-                          builder: (_) => CatalogDetailSheet(pod: pod),
-                        ),
+                return ValueListenableBuilder<bool>(
+                  valueListenable: controller.isLoading,
+                  builder: (context, loading, _) {
+                    if (loading && pods.isEmpty) {
+                      return const _CatalogSkeleton();
+                    }
+                    if (pods.isEmpty) {
+                      return Center(
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(20),
-                                child: Image.network(pod.imageUrl, fit: BoxFit.cover),
-                              ),
-                            ),
-                            ListTile(
-                              title: Text(pod.name),
-                              subtitle: Text(pod.location),
-                              trailing: const AiInfoButton(),
+                            const Icon(IconlyLight.close_square),
+                            const SizedBox(height: 12),
+                            Text(strings.t('catalog.filters.reset')),
+                            TextButton(
+                              onPressed: controller.resetFilters,
+                              child: Text(strings.t('catalog.filters.reset')),
                             ),
                           ],
                         ),
+                      );
+                    }
+                    return GridView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: ResponsiveBreakpoints.columns(context),
+                        childAspectRatio: 0.8,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
                       ),
+                      itemCount: pods.length,
+                      itemBuilder: (context, index) {
+                        final pod = pods[index];
+                        return Hero(
+                          tag: pod.id,
+                          child: GlassContainer(
+                            onTap: () => showDialog(
+                              context: context,
+                              builder: (_) => CatalogDetailSheet(pod: pod),
+                            ),
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Image.network(pod.imageUrl, fit: BoxFit.cover),
+                                  ),
+                                ),
+                                ListTile(
+                                  title: Text(pod.name),
+                                  subtitle: Text('${pod.location} • ${_statusText(pod, strings)}'),
+                                  trailing: const AiInfoButton(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 );
@@ -144,6 +171,7 @@ class _PodSearchDelegate extends SearchDelegate<Pod?> {
 
   @override
   Widget buildSuggestions(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     controller.applySearch(query);
     return ValueListenableBuilder<List<Pod>>(
       valueListenable: controller.items,
@@ -154,7 +182,7 @@ class _PodSearchDelegate extends SearchDelegate<Pod?> {
             final pod = pods[index];
             return ListTile(
               title: Text(pod.name),
-              subtitle: Text(pod.location),
+              subtitle: Text('${pod.location} • ${_statusText(pod, strings)}'),
               onTap: () => close(context, pod),
             );
           },
@@ -165,4 +193,148 @@ class _PodSearchDelegate extends SearchDelegate<Pod?> {
 
   @override
   Widget buildResults(BuildContext context) => buildSuggestions(context);
+}
+
+class _Filters extends StatelessWidget {
+  const _Filters({required this.controller, required this.strings});
+
+  final CatalogController controller;
+  final AppLocalizations strings;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusChips = [
+      ('low', strings.t('common.status.low')),
+      ('medium', strings.t('common.status.medium')),
+      ('full', strings.t('common.status.full')),
+    ];
+    final onlineChips = [
+      ('online', strings.t('catalog.filters.online_label')),
+      ('offline', strings.t('catalog.filters.offline')),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(strings.t('filters.title'), style: Theme.of(context).textTheme.titleSmall),
+              TextButton(
+                onPressed: controller.resetFilters,
+                child: Text(strings.t('catalog.filters.reset')),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 48,
+          child: ValueListenableBuilder<Set<String>>(
+            valueListenable: controller.statusFilters,
+            builder: (context, selected, _) {
+              return ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  for (final chip in statusChips)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(chip.$2),
+                        selected: selected.contains(chip.$1),
+                        onSelected: (_) => controller.toggleStatus(chip.$1),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+        SizedBox(
+          height: 48,
+          child: ValueListenableBuilder<Set<String>>(
+            valueListenable: controller.onlineFilters,
+            builder: (context, selected, _) {
+              return ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  for (final chip in onlineChips)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(chip.$2),
+                        selected: selected.contains(chip.$1),
+                        onSelected: (_) => controller.toggleOnline(chip.$1),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+        SizedBox(
+          height: 48,
+          child: ValueListenableBuilder<Set<String>>(
+            valueListenable: controller.locationFilters,
+            builder: (context, selected, _) {
+              return ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  for (final location in controller.availableLocations)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(location),
+                        selected: selected.contains(location),
+                        onSelected: (_) => controller.toggleLocation(location),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CatalogSkeleton extends StatelessWidget {
+  const _CatalogSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 6,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: ResponsiveBreakpoints.columns(context),
+        childAspectRatio: 0.8,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemBuilder: (context, index) {
+        return const Skeleton();
+      },
+    );
+  }
+}
+
+class ResponsiveBreakpoints {
+  static int columns(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    if (width >= 1100) return 4;
+    if (width >= 800) return 3;
+    return 2;
+  }
+}
+
+String _statusText(Pod pod, AppLocalizations strings) {
+  final level = pod.waterLevelPercent;
+  if (level < 0.4) return strings.t('common.status.low');
+  if (level < 0.7) return strings.t('common.status.medium');
+  return strings.t('common.status.full');
 }

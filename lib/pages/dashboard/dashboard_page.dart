@@ -3,7 +3,9 @@ import 'package:iconly/iconly.dart';
 
 import '../../controllers/app_controller.dart';
 import '../../controllers/dashboard_controller.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/pod.dart';
+import '../../utils/audio_stub.dart';
 import '../../widgets/ai_info_button.dart';
 import '../../widgets/glass_container.dart';
 import '../../widgets/pod_gauge.dart';
@@ -23,44 +25,118 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: dashboardController.refresh,
-      child: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            title: const Text('WaterPod'),
-            actions: const [
-              IconButton(icon: Icon(Icons.refresh), onPressed: null),
-            ],
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildMetrics(),
-                  const SizedBox(height: 16),
-                  _buildModes(),
-                  const SizedBox(height: 16),
-                  _buildGaugeSection(),
-                  const SizedBox(height: 16),
-                  _buildPodsList(),
+    final strings = AppLocalizations.of(context);
+    return Stack(
+      children: [
+        Positioned(
+          top: -120,
+          right: -80,
+          child: _bubble(180, Theme.of(context).colorScheme.primary.withOpacity(0.15)),
+        ),
+        Positioned(
+          bottom: -100,
+          left: -60,
+          child: _bubble(220, Theme.of(context).colorScheme.primary.withOpacity(0.1)),
+        ),
+        RefreshIndicator(
+          onRefresh: () async {
+            await dashboardController.refresh();
+            final pod = dashboardController.currentPod.value;
+            if (pod != null && pod.waterLevelPercent < 0.3) {
+              playAlertSound('onLowWaterLevel');
+            }
+          },
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+            slivers: [
+              SliverAppBar(
+                pinned: true,
+                title: Text(strings.t('dashboard.title')),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: dashboardController.refresh,
+                    tooltip: strings.t('dashboard.refresh'),
+                  ),
+                  IconButton(
+                    icon: const Icon(IconlyLight.danger),
+                    onPressed: () => playAlertSound('onPodOffline'),
+                  ),
+                  IconButton(
+                    icon: const Icon(IconlyLight.setting),
+                    onPressed: () => _showQuickActions(context, strings),
+                  ),
                 ],
               ),
-            ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildMetrics(strings),
+                      const SizedBox(height: 16),
+                      _buildModes(strings),
+                      const SizedBox(height: 16),
+                      _buildGaugeSection(strings),
+                      const SizedBox(height: 16),
+                      _buildPodsList(strings),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  void _showQuickActions(BuildContext context, AppLocalizations strings) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(IconlyLight.chart),
+                title: Text(strings.t('analytics.title')),
+                subtitle: Text(strings.t('comparison.selector')),
+              ),
+              ListTile(
+                leading: const Icon(IconlyLight.setting),
+                title: Text(strings.t('settings.title')),
+                subtitle: Text(strings.t('settings.alerts')),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _bubble(double size, Color color) {
+    return Container(
+      height: size,
+      width: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
       ),
     );
   }
 
-  Widget _buildMetrics() {
+  Widget _buildMetrics(AppLocalizations strings) {
     final metrics = [
-      ('Pods Online', '3/4'),
-      ('Humidity', '64%'),
-      ('Water Temp', '22°C'),
+      (strings.t('dashboard.metrics.online'), '6/8'),
+      (strings.t('dashboard.metrics.humidity'), '64%'),
+      (strings.t('dashboard.metrics.temperature'), '22°C'),
     ];
     return Row(
       children: metrics
@@ -74,11 +150,15 @@ class _DashboardPageState extends State<DashboardPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(metric.$1),
+                        Text(metric.$1, style: Theme.of(context).textTheme.labelMedium),
                         const SizedBox(height: 8),
-                        Text(
-                          metric.$2,
-                          style: Theme.of(context).textTheme.titleLarge,
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 400),
+                          child: Text(
+                            metric.$2,
+                            key: ValueKey(metric.$2),
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
                         ),
                       ],
                     ),
@@ -91,11 +171,11 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildModes() {
+  Widget _buildModes(AppLocalizations strings) {
     final modes = [
-      ('auto', IconlyLight.tick_square),
-      ('eco', IconlyLight.chart),
-      ('boost', IconlyLight.flash),
+      ('auto', IconlyLight.tick_square, strings.t('dashboard.modes.auto')),
+      ('eco', IconlyLight.chart, strings.t('dashboard.modes.eco')),
+      ('boost', IconlyLight.flash, strings.t('dashboard.modes.boost')),
     ];
     return ValueListenableBuilder<String>(
       valueListenable: dashboardController.selectedMode,
@@ -117,7 +197,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               children: [
                                 Icon(mode.$2),
                                 const SizedBox(width: 8),
-                                Text(mode.$1.toUpperCase()),
+                                Text(mode.$3.toUpperCase()),
                               ],
                             ),
                           ),
@@ -131,7 +211,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildGaugeSection() {
+  Widget _buildGaugeSection(AppLocalizations strings) {
     return GlassContainer(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -140,7 +220,7 @@ class _DashboardPageState extends State<DashboardPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Active Pod'),
+                Text(strings.t('dashboard.active')),
                 const AiInfoButton(),
               ],
             ),
@@ -157,6 +237,12 @@ class _DashboardPageState extends State<DashboardPage> {
                     const SizedBox(height: 12),
                     Text(pod.name, style: Theme.of(context).textTheme.titleLarge),
                     Text(pod.location),
+                    const SizedBox(height: 8),
+                    FilledButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(IconlyLight.discovery),
+                      label: Text(strings.t('ai.button')),
+                    ),
                   ],
                 );
               },
@@ -167,7 +253,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildPodsList() {
+  Widget _buildPodsList(AppLocalizations strings) {
     return ValueListenableBuilder<List<Pod>>(
       valueListenable: dashboardController.podsSummary,
       builder: (context, pods, child) {
@@ -194,7 +280,17 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(pod.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        Text('${(pod.waterLevelPercent * 100).toStringAsFixed(0)}% water'),
+                        Text(
+                          '${(pod.waterLevelPercent * 100).toStringAsFixed(0)}% ${strings.t('catalog.filters.status').toLowerCase()}',
+                        ),
+                        Text(
+                          pod.isOnline
+                              ? strings.t('catalog.filters.online_label')
+                              : strings.t('catalog.filters.offline'),
+                          style: TextStyle(
+                            color: pod.isOnline ? Colors.green : Colors.orange,
+                          ),
+                        ),
                       ],
                     ),
                   ),
