@@ -9,6 +9,7 @@ class Pod {
     required this.isOnline,
     required this.imageUrl,
     required this.elementType,
+    this.isFavorite = false,
     this.tags = const <String>[],
   });
 
@@ -21,6 +22,7 @@ class Pod {
   final bool isOnline;
   final String imageUrl;
   final String elementType;
+  final bool isFavorite;
   final List<String> tags;
 
   Pod copyWith({
@@ -33,6 +35,7 @@ class Pod {
     bool? isOnline,
     String? imageUrl,
     String? elementType,
+    bool? isFavorite,
     List<String>? tags,
   }) {
     return Pod(
@@ -45,6 +48,7 @@ class Pod {
       isOnline: isOnline ?? this.isOnline,
       imageUrl: imageUrl ?? this.imageUrl,
       elementType: elementType ?? this.elementType,
+      isFavorite: isFavorite ?? this.isFavorite,
       tags: tags ?? this.tags,
     );
   }

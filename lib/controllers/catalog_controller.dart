@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/dummy_data.dart';
 import '../models/pod.dart';
@@ -7,6 +8,7 @@ class CatalogController {
   CatalogController() {
     items.value = List.of(_allPods);
     isLoading.value = false;
+    _restoreFavorites();
   }
 
   final List<Pod> _allPods = List.of(dummyPods);
@@ -18,6 +20,10 @@ class CatalogController {
   final ValueNotifier<Set<String>> onlineFilters = ValueNotifier(<String>{});
   final ValueNotifier<Set<String>> locationFilters = ValueNotifier(<String>{});
   final ValueNotifier<Set<String>> elementFilters = ValueNotifier(<String>{});
+  final ValueNotifier<Set<String>> favoriteIds = ValueNotifier(<String>{});
+  final ValueNotifier<bool> favoritesOnly = ValueNotifier(false);
+
+  static const _favoritesKey = 'catalog_favorites';
 
   List<String> get availableLocations => {
         for (final pod in _allPods) pod.location,
@@ -66,6 +72,7 @@ class CatalogController {
     onlineFilters.value = <String>{};
     locationFilters.value = <String>{};
     elementFilters.value = <String>{};
+    favoritesOnly.value = false;
     searchQuery.value = '';
     _applyFilters();
   }
@@ -76,6 +83,36 @@ class CatalogController {
       next.remove(element);
     }
     elementFilters.value = next;
+    _applyFilters();
+  }
+
+  Future<void> _restoreFavorites() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList(_favoritesKey) ?? <String>[];
+    if (saved.isEmpty) {
+      saved.addAll(
+        _allPods.where((pod) => pod.isFavorite).map((pod) => pod.id),
+      );
+    }
+    favoriteIds.value = saved.toSet();
+    _syncFavorites();
+    _applyFilters();
+  }
+
+  Future<void> toggleFavorite(String podId) async {
+    final next = {...favoriteIds.value};
+    if (!next.add(podId)) {
+      next.remove(podId);
+    }
+    favoriteIds.value = next;
+    _syncFavorites();
+    _applyFilters();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_favoritesKey, next.toList());
+  }
+
+  void toggleFavoritesOnly() {
+    favoritesOnly.value = !favoritesOnly.value;
     _applyFilters();
   }
 
@@ -91,6 +128,7 @@ class CatalogController {
         )
         .toList();
     _allPods.addAll(more);
+    _syncFavorites();
     _applyFilters();
     isLoading.value = false;
   }
@@ -129,9 +167,22 @@ class CatalogController {
           .where((pod) => elementFilters.value.contains(pod.elementType))
           .toList();
     }
+    if (favoritesOnly.value) {
+      filtered = filtered.where((pod) => pod.isFavorite).toList();
+    }
     items.value = filtered;
     if (filtered.isEmpty) {
       isLoading.value = false;
+    }
+  }
+
+  void _syncFavorites() {
+    for (var i = 0; i < _allPods.length; i++) {
+      final pod = _allPods[i];
+      final isFavorite = favoriteIds.value.contains(pod.id);
+      if (pod.isFavorite != isFavorite) {
+        _allPods[i] = pod.copyWith(isFavorite: isFavorite);
+      }
     }
   }
 

@@ -16,6 +16,7 @@ final dummyPods = <Pod>[
     isOnline: true,
     imageUrl: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6',
     elementType: 'pod',
+    isFavorite: true,
     tags: const ['Hydroponic', 'Indoor'],
   ),
   Pod(
@@ -52,6 +53,7 @@ final dummyPods = <Pod>[
     isOnline: true,
     imageUrl: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=800&q=60',
     elementType: 'pod',
+    isFavorite: true,
     tags: const ['Indoor', 'Cooling'],
   ),
   Pod(

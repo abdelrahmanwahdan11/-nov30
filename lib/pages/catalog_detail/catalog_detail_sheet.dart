@@ -7,9 +7,10 @@ import '../../models/pod.dart';
 import '../../widgets/ai_info_button.dart';
 
 class CatalogDetailSheet extends StatefulWidget {
-  const CatalogDetailSheet({super.key, required this.pod});
+  const CatalogDetailSheet({super.key, required this.pod, this.onToggleFavorite});
 
   final Pod pod;
+  final ValueChanged<String>? onToggleFavorite;
 
   @override
   State<CatalogDetailSheet> createState() => _CatalogDetailSheetState();
@@ -21,6 +22,13 @@ class _CatalogDetailSheetState extends State<CatalogDetailSheet> with SingleTick
     duration: const Duration(milliseconds: 600),
   );
   bool flipped = false;
+  late bool isFavorite;
+
+  @override
+  void initState() {
+    super.initState();
+    isFavorite = widget.pod.isFavorite;
+  }
 
   void _toggle() {
     setState(() => flipped = !flipped);
@@ -29,6 +37,11 @@ class _CatalogDetailSheetState extends State<CatalogDetailSheet> with SingleTick
     } else {
       controller.reverse();
     }
+  }
+
+  void _toggleFavorite() {
+    setState(() => isFavorite = !isFavorite);
+    widget.onToggleFavorite?.call(widget.pod.id);
   }
 
   @override
@@ -72,8 +85,29 @@ class _CatalogDetailSheetState extends State<CatalogDetailSheet> with SingleTick
             child: Image.network(pod.imageUrl, height: 160, fit: BoxFit.cover),
           ),
           const SizedBox(height: 12),
-          Text(pod.name, style: Theme.of(context).textTheme.titleLarge),
-          Text(pod.location),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(pod.name, style: Theme.of(context).textTheme.titleLarge),
+                    Text(pod.location),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Icon(
+                  isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: isFavorite ? Colors.pinkAccent : null,
+                ),
+                onPressed: _toggleFavorite,
+                tooltip: isFavorite
+                    ? strings.t('catalog.favorite_added')
+                    : strings.t('catalog.favorite_add'),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
           Chip(label: Text(elementLabel)),
           if (pod.tags.isNotEmpty)

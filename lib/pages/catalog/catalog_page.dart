@@ -119,14 +119,33 @@ class _CatalogPageState extends State<CatalogPage> {
                           child: GlassContainer(
                             onTap: () => showDialog(
                               context: context,
-                              builder: (_) => CatalogDetailSheet(pod: pod),
+                              builder: (_) => CatalogDetailSheet(
+                                pod: pod,
+                                onToggleFavorite: controller.toggleFavorite,
+                              ),
                             ),
                             child: Column(
                               children: [
                                 Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(20),
-                                    child: Image.network(pod.imageUrl, fit: BoxFit.cover),
+                                  child: Stack(
+                                    children: [
+                                      Positioned.fill(
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(20),
+                                          child:
+                                              Image.network(pod.imageUrl, fit: BoxFit.cover),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        top: 8,
+                                        right: 8,
+                                        child: _FavoriteButton(
+                                          isFavorite: pod.isFavorite,
+                                          onPressed: () =>
+                                              controller.toggleFavorite(pod.id),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                                 ListTile(
@@ -203,6 +222,13 @@ class _PodSearchDelegate extends SearchDelegate<Pod?> {
             return ListTile(
               title: Text(pod.name),
               subtitle: Text('${pod.location} • ${_statusText(pod, strings)}'),
+              trailing: IconButton(
+                icon: Icon(
+                  pod.isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: pod.isFavorite ? Colors.pinkAccent : null,
+                ),
+                onPressed: () => controller.toggleFavorite(pod.id),
+              ),
               onTap: () => close(context, pod),
             );
           },
@@ -249,6 +275,23 @@ class _Filters extends StatelessWidget {
                 child: Text(strings.t('catalog.filters.reset')),
               ),
             ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: ValueListenableBuilder<bool>(
+            valueListenable: controller.favoritesOnly,
+            builder: (context, favsOnly, _) {
+              return FilterChip(
+                avatar: Icon(
+                  favsOnly ? Icons.favorite : Icons.favorite_border,
+                  size: 18,
+                ),
+                selected: favsOnly,
+                label: Text(strings.t('catalog.filters.favorites')),
+                onSelected: (_) => controller.toggleFavoritesOnly(),
+              );
+            },
           ),
         ),
         SizedBox(
@@ -365,6 +408,29 @@ class _CatalogSkeleton extends StatelessWidget {
       itemBuilder: (context, index) {
         return const Skeleton();
       },
+    );
+  }
+}
+
+class _FavoriteButton extends StatelessWidget {
+  const _FavoriteButton({required this.isFavorite, required this.onPressed});
+
+  final bool isFavorite;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withOpacity(0.35),
+      shape: const CircleBorder(),
+      child: IconButton(
+        icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border),
+        color: isFavorite ? Colors.pinkAccent : Colors.white,
+        onPressed: onPressed,
+        tooltip: isFavorite
+            ? AppLocalizations.of(context).t('catalog.favorite_added')
+            : AppLocalizations.of(context).t('catalog.favorite_add'),
+      ),
     );
   }
 }
