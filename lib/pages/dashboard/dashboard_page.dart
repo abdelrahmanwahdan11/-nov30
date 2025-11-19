@@ -4,6 +4,7 @@ import 'package:iconly/iconly.dart';
 import '../../controllers/app_controller.dart';
 import '../../controllers/dashboard_controller.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/log_entry.dart';
 import '../../models/pod.dart';
 import '../../utils/audio_stub.dart';
 import '../../widgets/ai_info_button.dart';
@@ -81,6 +82,8 @@ class _DashboardPageState extends State<DashboardPage> {
                       _buildGaugeSection(strings),
                       const SizedBox(height: 16),
                       _buildPodsList(strings),
+                      const SizedBox(height: 16),
+                      _buildRecentActivity(strings),
                     ],
                   ),
                 ),
@@ -281,7 +284,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         const SizedBox(height: 8),
                         Text(pod.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                         Text(
-                          '${(pod.waterLevelPercent * 100).toStringAsFixed(0)}% ${strings.t('catalog.filters.status').toLowerCase()}',
+                          '${(pod.waterLevelPercent * 100).toStringAsFixed(0)}% • ${_statusText(pod, strings)}',
                         ),
                         Text(
                           pod.isOnline
@@ -304,4 +307,84 @@ class _DashboardPageState extends State<DashboardPage> {
       },
     );
   }
+
+  Widget _buildRecentActivity(AppLocalizations strings) {
+    return ValueListenableBuilder<List<LogEntry>>(
+      valueListenable: dashboardController.recentLogs,
+      builder: (context, logs, child) {
+        if (logs.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return GlassContainer(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(strings.t('dashboard.recent_activity'),
+                        style: Theme.of(context).textTheme.titleMedium),
+                    IconButton(
+                      icon: const Icon(IconlyLight.paper),
+                      tooltip: strings.t('logs.title'),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(strings.t('logs.updated'))),
+                        );
+                      },
+                    )
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...logs.take(4).map((log) {
+                  final isAlert = log.type == 'alert';
+                  final time = TimeOfDay.fromDateTime(log.timestamp).format(context);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          height: 36,
+                          width: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isAlert
+                                ? Colors.orange.withOpacity(0.2)
+                                : Colors.green.withOpacity(0.2),
+                          ),
+                          child: Icon(
+                            isAlert ? IconlyLight.danger : IconlyLight.info_square,
+                            color: isAlert ? Colors.orange : Colors.green,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(log.message,
+                                  style: Theme.of(context).textTheme.bodyLarge),
+                              Text(time, style: Theme.of(context).textTheme.bodySmall),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+String _statusText(Pod pod, AppLocalizations strings) {
+  if (pod.waterLevelPercent < 0.4) return strings.t('common.status.low');
+  if (pod.waterLevelPercent < 0.7) return strings.t('common.status.medium');
+  return strings.t('common.status.full');
 }

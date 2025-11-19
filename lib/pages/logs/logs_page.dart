@@ -5,7 +5,7 @@ import '../../controllers/logs_controller.dart';
 import '../../data/dummy_data.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/log_entry.dart';
-import '../../widgets/skeleton.dart';
+import '../../models/pod.dart';
 
 class LogsPage extends StatefulWidget {
   const LogsPage({super.key});
@@ -16,15 +16,48 @@ class LogsPage extends StatefulWidget {
 
 class _LogsPageState extends State<LogsPage> {
   final LogsController controller = LogsController();
+  final TextEditingController searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
+    final podById = {for (final pod in dummyPods) pod.id: pod};
     final podName = {for (final pod in dummyPods) pod.id: pod.name};
     return Scaffold(
       appBar: AppBar(title: Text(strings.t('logs.title'))),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: ValueListenableBuilder<String>(
+              valueListenable: controller.searchQuery,
+              builder: (context, query, _) {
+                return TextField(
+                  controller: searchController,
+                  onChanged: controller.applySearch,
+                  decoration: InputDecoration(
+                    hintText: strings.t('logs.search_hint'),
+                    prefixIcon: const Icon(IconlyLight.search),
+                    suffixIcon: query.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              searchController.clear();
+                              controller.applySearch('');
+                            },
+                          ),
+                  ),
+                );
+              },
+            ),
+          ),
           _FilterBar(controller: controller, strings: strings, podName: podName),
           Expanded(
             child: RefreshIndicator(
@@ -33,7 +66,25 @@ class _LogsPageState extends State<LogsPage> {
                 valueListenable: controller.logEntries,
                 builder: (context, entries, _) {
                   if (entries.isEmpty) {
-                    return const Center(child: Skeleton(height: 120, width: 200));
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(IconlyLight.close_square),
+                          const SizedBox(height: 12),
+                          Text(strings.t('logs.empty')),
+                          TextButton(
+                            onPressed: () {
+                              searchController.clear();
+                              controller.applySearch('');
+                              controller.filterByPod(null);
+                              controller.filterByType(null);
+                            },
+                            child: Text(strings.t('catalog.filters.reset')),
+                          ),
+                        ],
+                      ),
+                    );
                   }
                   return ListView.separated(
                     padding: const EdgeInsets.all(16),
@@ -42,6 +93,14 @@ class _LogsPageState extends State<LogsPage> {
                     itemBuilder: (context, index) {
                       final entry = entries[index];
                       final isAlert = entry.type == 'alert';
+                      final pod = podById[entry.podId];
+                      final elementLabel = pod == null
+                          ? ''
+                          : strings.t('catalog.element.${pod.elementType}');
+                      final statusLabel = pod == null
+                          ? ''
+                          : _statusLabel(pod, strings);
+                      final time = TimeOfDay.fromDateTime(entry.timestamp).format(context);
                       return AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
                         padding: const EdgeInsets.all(16),
@@ -67,7 +126,21 @@ class _LogsPageState extends State<LogsPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(entry.message, style: Theme.of(context).textTheme.titleMedium),
-                                  Text('${podName[entry.podId] ?? entry.podId} • ${entry.timestamp}'),
+                                  Text('${podName[entry.podId] ?? entry.podId} • $time'),
+                                  if (pod != null)
+                                    Wrap(
+                                      spacing: 6,
+                                      children: [
+                                        Chip(
+                                          visualDensity: VisualDensity.compact,
+                                          label: Text(elementLabel),
+                                        ),
+                                        Chip(
+                                          visualDensity: VisualDensity.compact,
+                                          label: Text(statusLabel),
+                                        ),
+                                      ],
+                                    ),
                                 ],
                               ),
                             ),
@@ -103,6 +176,12 @@ class _LogsPageState extends State<LogsPage> {
       ),
     );
   }
+}
+
+String _statusLabel(Pod pod, AppLocalizations strings) {
+  if (pod.waterLevelPercent < 0.4) return strings.t('common.status.low');
+  if (pod.waterLevelPercent < 0.7) return strings.t('common.status.medium');
+  return strings.t('common.status.full');
 }
 
 class _FilterBar extends StatelessWidget {

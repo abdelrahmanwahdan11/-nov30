@@ -56,6 +56,7 @@ class _CatalogDetailSheetState extends State<CatalogDetailSheet> with SingleTick
   Widget _buildFront() {
     final pod = widget.pod;
     final strings = AppLocalizations.of(context);
+    final elementLabel = strings.t('catalog.element.${pod.elementType}');
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -74,6 +75,22 @@ class _CatalogDetailSheetState extends State<CatalogDetailSheet> with SingleTick
           Text(pod.name, style: Theme.of(context).textTheme.titleLarge),
           Text(pod.location),
           const SizedBox(height: 12),
+          Chip(label: Text(elementLabel)),
+          if (pod.tags.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final tag in pod.tags)
+                    Chip(
+                      label: Text(tag),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                ],
+              ),
+            ),
           const AiInfoButton(),
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -87,6 +104,7 @@ class _CatalogDetailSheetState extends State<CatalogDetailSheet> with SingleTick
   Widget _buildBack() {
     final pod = widget.pod;
     final strings = AppLocalizations.of(context);
+    final elementLabel = strings.t('catalog.element.${pod.elementType}');
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -100,6 +118,7 @@ class _CatalogDetailSheetState extends State<CatalogDetailSheet> with SingleTick
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
+              _MetricChip(label: strings.t('catalog.filters.element'), value: elementLabel),
               _MetricChip(
                 label: strings.t('catalog.filters.status'),
                 value: '${(pod.waterLevelPercent * 100).toStringAsFixed(0)}%',

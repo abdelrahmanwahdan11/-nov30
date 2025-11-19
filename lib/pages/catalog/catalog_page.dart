@@ -112,6 +112,8 @@ class _CatalogPageState extends State<CatalogPage> {
                       itemCount: pods.length,
                       itemBuilder: (context, index) {
                         final pod = pods[index];
+                        final elementLabel =
+                            strings.t('catalog.element.${pod.elementType}');
                         return Hero(
                           tag: pod.id,
                           child: GlassContainer(
@@ -129,9 +131,27 @@ class _CatalogPageState extends State<CatalogPage> {
                                 ),
                                 ListTile(
                                   title: Text(pod.name),
-                                  subtitle: Text('${pod.location} • ${_statusText(pod, strings)}'),
+                                  subtitle: Text(
+                                    '${pod.location} • $elementLabel • ${_statusText(pod, strings)}',
+                                  ),
                                   trailing: const AiInfoButton(),
                                 ),
+                                if (pod.tags.isNotEmpty)
+                                  Padding(
+                                    padding:
+                                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    child: Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: [
+                                        for (final tag in pod.tags)
+                                          Chip(
+                                            label: Text(tag),
+                                            visualDensity: VisualDensity.compact,
+                                          )
+                                      ],
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
@@ -212,6 +232,9 @@ class _Filters extends StatelessWidget {
       ('online', strings.t('catalog.filters.online_label')),
       ('offline', strings.t('catalog.filters.offline')),
     ];
+    final elementChips = controller.elementTypes
+        .map((type) => (type, strings.t('catalog.element.$type')))
+        .toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -290,6 +313,29 @@ class _Filters extends StatelessWidget {
                         label: Text(location),
                         selected: selected.contains(location),
                         onSelected: (_) => controller.toggleLocation(location),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+        SizedBox(
+          height: 48,
+          child: ValueListenableBuilder<Set<String>>(
+            valueListenable: controller.elementFilters,
+            builder: (context, selected, _) {
+              return ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  for (final chip in elementChips)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(chip.$2),
+                        selected: selected.contains(chip.$1),
+                        onSelected: (_) => controller.toggleElement(chip.$1),
                       ),
                     ),
                 ],

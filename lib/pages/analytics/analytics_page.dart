@@ -84,9 +84,18 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
-                              _SummaryTile(label: 'Min', value: _min(points).toStringAsFixed(1)),
-                              _SummaryTile(label: 'Avg', value: _avg(points).toStringAsFixed(1)),
-                              _SummaryTile(label: 'Max', value: _max(points).toStringAsFixed(1)),
+                              _SummaryTile(
+                                label: strings.t('analytics.summary.min'),
+                                value: _min(points).toStringAsFixed(1),
+                              ),
+                              _SummaryTile(
+                                label: strings.t('analytics.summary.avg'),
+                                value: _avg(points).toStringAsFixed(1),
+                              ),
+                              _SummaryTile(
+                                label: strings.t('analytics.summary.max'),
+                                value: _max(points).toStringAsFixed(1),
+                              ),
                             ],
                           )
                         ],

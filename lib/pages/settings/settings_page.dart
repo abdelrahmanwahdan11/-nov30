@@ -3,6 +3,7 @@ import 'package:iconly/iconly.dart';
 
 import '../../controllers/app_controller.dart';
 import '../../l10n/app_localizations.dart';
+import '../../widgets/glass_container.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key, required this.appController});
@@ -78,6 +79,24 @@ class SettingsPage extends StatelessWidget {
                   .toList(),
             ),
             const SizedBox(height: 24),
+            GlassContainer(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(strings.t('settings.preview'),
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    Text(strings.t('settings.preview.subtitle'),
+                        style: Theme.of(context).textTheme.bodySmall),
+                    const SizedBox(height: 12),
+                    _ThemePreview(primary: appController.primaryColor),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
             SwitchListTile(
               title: Text(strings.t('settings.alerts')),
               value: appController.alertsEnabled,
@@ -98,6 +117,56 @@ class SettingsPage extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _ThemePreview extends StatelessWidget {
+  const _ThemePreview({required this.primary});
+
+  final Color primary;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [primary, primary.withOpacity(0.5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('WaterPod',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(color: Colors.white)),
+          const SizedBox(height: 8),
+          Container(
+            height: 6,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            height: 6,
+            width: MediaQuery.of(context).size.width * 0.4,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

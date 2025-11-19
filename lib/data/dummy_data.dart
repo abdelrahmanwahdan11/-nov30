@@ -15,6 +15,8 @@ final dummyPods = <Pod>[
     waterTemperature: 23,
     isOnline: true,
     imageUrl: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6',
+    elementType: 'pod',
+    tags: const ['Hydroponic', 'Indoor'],
   ),
   Pod(
     id: 'pod-2',
@@ -25,6 +27,8 @@ final dummyPods = <Pod>[
     waterTemperature: 20,
     isOnline: true,
     imageUrl: 'https://images.unsplash.com/photo-1459411552884-841db9b3cc2a',
+    elementType: 'sensor',
+    tags: const ['Soil', 'Monitoring'],
   ),
   Pod(
     id: 'pod-3',
@@ -35,6 +39,8 @@ final dummyPods = <Pod>[
     waterTemperature: 18,
     isOnline: false,
     imageUrl: 'https://images.unsplash.com/photo-1470246973918-29a93221c455',
+    elementType: 'pump',
+    tags: const ['Irrigation', 'Outdoor'],
   ),
   Pod(
     id: 'pod-4',
@@ -45,6 +51,8 @@ final dummyPods = <Pod>[
     waterTemperature: 19,
     isOnline: true,
     imageUrl: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=800&q=60',
+    elementType: 'pod',
+    tags: const ['Indoor', 'Cooling'],
   ),
   Pod(
     id: 'pod-5',
@@ -55,6 +63,8 @@ final dummyPods = <Pod>[
     waterTemperature: 16,
     isOnline: true,
     imageUrl: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=900&q=60',
+    elementType: 'sensor',
+    tags: const ['Cooling', 'Alert'],
   ),
   Pod(
     id: 'pod-6',
@@ -65,6 +75,8 @@ final dummyPods = <Pod>[
     waterTemperature: 24,
     isOnline: false,
     imageUrl: 'https://images.unsplash.com/photo-1470246973918-29a93221c455?auto=format&fit=crop&w=900&q=60',
+    elementType: 'pump',
+    tags: const ['Maintenance', 'Outdoor'],
   ),
 ];
 

@@ -8,6 +8,8 @@ class Pod {
     required this.waterTemperature,
     required this.isOnline,
     required this.imageUrl,
+    required this.elementType,
+    this.tags = const <String>[],
   });
 
   final String id;
@@ -18,6 +20,8 @@ class Pod {
   final double waterTemperature;
   final bool isOnline;
   final String imageUrl;
+  final String elementType;
+  final List<String> tags;
 
   Pod copyWith({
     String? id,
@@ -28,6 +32,8 @@ class Pod {
     double? waterTemperature,
     bool? isOnline,
     String? imageUrl,
+    String? elementType,
+    List<String>? tags,
   }) {
     return Pod(
       id: id ?? this.id,
@@ -38,6 +44,8 @@ class Pod {
       waterTemperature: waterTemperature ?? this.waterTemperature,
       isOnline: isOnline ?? this.isOnline,
       imageUrl: imageUrl ?? this.imageUrl,
+      elementType: elementType ?? this.elementType,
+      tags: tags ?? this.tags,
     );
   }
 }

@@ -20,32 +20,45 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController passwordController = TextEditingController();
   bool showPassword = false;
 
-  String get passwordStrength {
+  String get passwordStrengthKey {
     final password = passwordController.text;
     if (password.length > 10 &&
         password.contains(RegExp(r'[A-Z]')) &&
         password.contains(RegExp(r'\d'))) {
-      return 'Strong';
+      return 'strong';
     }
     if (password.length > 6) {
-      return 'Medium';
+      return 'medium';
     }
     if (password.isEmpty) {
       return '';
     }
-    return 'Weak';
+    return 'weak';
   }
 
-  Color strengthColor(String label) {
-    switch (label) {
-      case 'Strong':
+  Color strengthColor(String key) {
+    switch (key) {
+      case 'strong':
         return Colors.green;
-      case 'Medium':
+      case 'medium':
         return Colors.orange;
-      case 'Weak':
+      case 'weak':
         return Colors.red;
       default:
         return Colors.transparent;
+    }
+  }
+
+  double strengthFactor(String key) {
+    switch (key) {
+      case 'strong':
+        return 1;
+      case 'medium':
+        return 0.6;
+      case 'weak':
+        return 0.3;
+      default:
+        return 0;
     }
   }
 
@@ -72,7 +85,15 @@ class _LoginPageState extends State<LoginPage> {
                   labelText: strings.t('login.email'),
                   prefixIcon: const Icon(IconlyLight.message),
                 ),
-                validator: (value) => value!.isEmpty ? 'Required' : null,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return strings.t('form.required');
+                  }
+                  if (!value.contains('@')) {
+                    return strings.t('form.invalid_email');
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -87,35 +108,42 @@ class _LoginPageState extends State<LoginPage> {
                     onPressed: () => setState(() => showPassword = !showPassword),
                   ),
                 ),
-                validator: (value) => value!.length < 6 ? 'Min 6 chars' : null,
+                validator: (value) =>
+                    value != null && value.length >= 6 ? null : strings.t('form.password_min'),
               ),
               const SizedBox(height: 8),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                height: 6,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: strengthColor(passwordStrength).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: passwordStrength == 'Strong'
-                        ? 1
-                        : passwordStrength == 'Medium'
-                            ? 0.6
-                            : 0.3,
-                    child: Container(
+              Builder(builder: (context) {
+                final key = passwordStrengthKey;
+                final label = key.isEmpty ? '' : strings.t('auth.strength.$key');
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      height: 6,
+                      width: double.infinity,
                       decoration: BoxDecoration(
-                        color: strengthColor(passwordStrength),
+                        color: strengthColor(key).withOpacity(0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: FractionallySizedBox(
+                          widthFactor: strengthFactor(key),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: strengthColor(key),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-              Text(passwordStrength, style: theme.textTheme.bodySmall),
+                    const SizedBox(height: 4),
+                    Text(label, style: theme.textTheme.bodySmall),
+                  ],
+                );
+              }),
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerRight,
