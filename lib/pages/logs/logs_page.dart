@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:iconly/iconly.dart';
 
 import '../../controllers/logs_controller.dart';
@@ -30,7 +31,29 @@ class _LogsPageState extends State<LogsPage> {
     final podById = {for (final pod in dummyPods) pod.id: pod};
     final podName = {for (final pod in dummyPods) pod.id: pod.name};
     return Scaffold(
-      appBar: AppBar(title: Text(strings.t('logs.title'))),
+      appBar: AppBar(
+        title: Text(strings.t('logs.title')),
+        actions: [
+          IconButton(
+            tooltip: strings.t('logs.export'),
+            icon: const Icon(IconlyLight.download),
+            onPressed: () async {
+              final buffer = controller.logEntries.value
+                  .map(
+                    (e) =>
+                        '[${e.timestamp.toIso8601String()}] ${podName[e.podId] ?? e.podId} • ${e.type.toUpperCase()} • ${e.message}',
+                  )
+                  .join('\n');
+              await Clipboard.setData(ClipboardData(text: buffer));
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(strings.t('logs.exported'))),
+                );
+              }
+            },
+          )
+        ],
+      ),
       body: Column(
         children: [
           Padding(

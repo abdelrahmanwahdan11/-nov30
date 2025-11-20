@@ -48,7 +48,7 @@ class _SchedulePageState extends State<SchedulePage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text('${date.day}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            Text('${date.month}/${date.year}'),
+                            Text(strings.t('schedule.day.${date.weekday}')),
                           ],
                         ),
                       ),
@@ -58,42 +58,115 @@ class _SchedulePageState extends State<SchedulePage> {
               },
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ValueListenableBuilder<List<ScheduleRule>>(
+              valueListenable: controller.rules,
+              builder: (context, rules, _) {
+                return ValueListenableBuilder<DateTime>(
+                  valueListenable: controller.selectedDate,
+                  builder: (context, selectedDate, __) {
+                    final dayRules = controller.rulesForDay(selectedDate);
+                    final activeCount = dayRules.where((rule) => rule.isEnabled).length;
+                    final pausedCount = dayRules.length - activeCount;
+                    final next = controller.nextRun(selectedDate);
+                    final nextLabel = next == null
+                        ? strings.t('schedule.no_next')
+                        : '${strings.t('schedule.next_run')} ${TimeOfDay.fromDateTime(next).format(context)}';
+                    return Row(
+                      children: [
+                        _SummaryPill(label: strings.t('schedule.active_rules'), value: activeCount.toString()),
+                        const SizedBox(width: 8),
+                        _SummaryPill(label: strings.t('schedule.paused_rules'), value: pausedCount.toString()),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _SummaryPill(
+                            label: strings.t('schedule.next_label'),
+                            value: nextLabel,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+          ),
           Expanded(
             child: RefreshIndicator(
               onRefresh: controller.refresh,
-              child: ValueListenableBuilder<List<ScheduleRule>>(
-                valueListenable: controller.rules,
-                builder: (context, rules, _) {
-                  if (rules.isEmpty) {
-                    return Center(child: Text(strings.t('schedule.empty')));
-                  }
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: rules.length,
-                    itemBuilder: (context, index) {
-                      final rule = rules[index];
-                      final pod = dummyPods.firstWhere((element) => element.id == rule.podId);
-                      return Card(
-                        child: ExpansionTile(
-                          leading: CircleAvatar(backgroundImage: NetworkImage(pod.imageUrl)),
-                          title: Text(pod.name),
-                          subtitle: Text('${rule.startTime.format(context)} • ${rule.durationMinutes} min'),
-                          children: [
-                            Text('${strings.t('schedule.days')}: ${rule.daysOfWeek.join(', ')}'),
-                            ButtonBar(
+              child: ValueListenableBuilder<DateTime>(
+                valueListenable: controller.selectedDate,
+                builder: (context, selectedDate, _) {
+                  return ValueListenableBuilder<List<ScheduleRule>>(
+                    valueListenable: controller.rules,
+                    builder: (context, rules, __) {
+                      final dayRules = controller.rulesForDay(selectedDate);
+                      if (dayRules.isEmpty) {
+                        return Center(child: Text(strings.t('schedule.empty')));
+                      }
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: dayRules.length,
+                        itemBuilder: (context, index) {
+                          final rule = dayRules[index];
+                          final pod = dummyPods.firstWhere((element) => element.id == rule.podId);
+                          return Card(
+                            child: ExpansionTile(
+                              leading: CircleAvatar(backgroundImage: NetworkImage(pod.imageUrl)),
+                              title: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(rule.label.isEmpty ? pod.name : rule.label),
+                                  Text(
+                                    '${pod.name} • ${rule.startTime.format(context)} • ${rule.durationMinutes} ${strings.t('schedule.mins')}',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ],
+                              ),
+                              subtitle: Wrap(
+                                spacing: 6,
+                                children: [
+                                  Chip(
+                                    label: Text(rule.isEnabled
+                                        ? strings.t('schedule.enabled')
+                                        : strings.t('schedule.disabled')),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                  Chip(
+                                    label: Text('${strings.t('schedule.days')}: ${_daysLabel(rule, strings)}'),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                ],
+                              ),
                               children: [
-                                TextButton(
-                                  onPressed: () => controller.editRule(rule),
-                                  child: Text(strings.t('schedule.add')),
-                                ),
-                                TextButton(
-                                  onPressed: () => controller.deleteRule(rule.id),
-                                  child: Text(strings.t('schedule.cancel')),
-                                ),
+                                ButtonBar(
+                                  alignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    TextButton(
+                                      onPressed: () => controller.toggleEnabled(rule.id),
+                                      child: Text(rule.isEnabled
+                                          ? strings.t('schedule.pause')
+                                          : strings.t('schedule.resume')),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => controller.duplicateRule(rule),
+                                      child: Text(strings.t('schedule.duplicate')),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => controller.editRule(rule),
+                                      child: Text(strings.t('schedule.edit')),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => controller.deleteRule(rule.id),
+                                      child: Text(strings.t('schedule.cancel')),
+                                    ),
+                                  ],
+                                )
                               ],
-                            )
-                          ],
-                        ),
+                            ),
+                          );
+                        },
                       );
                     },
                   );
@@ -138,6 +211,7 @@ class _SchedulePageState extends State<SchedulePage> {
               startTime: const TimeOfDay(hour: 6, minute: 0),
               durationMinutes: 30,
               daysOfWeek: const [1, 3, 5],
+              label: strings.t('schedule.add'),
             ),
           );
         },
@@ -163,6 +237,20 @@ class _RuleEditorState extends State<_RuleEditor> {
   late int duration = widget.rule.durationMinutes;
   late List<int> days = List.of(widget.rule.daysOfWeek);
   late String podId = widget.rule.podId;
+  late bool isEnabled = widget.rule.isEnabled;
+  late final TextEditingController labelController;
+
+  @override
+  void initState() {
+    super.initState();
+    labelController = TextEditingController(text: widget.rule.label);
+  }
+
+  @override
+  void dispose() {
+    labelController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -177,6 +265,13 @@ class _RuleEditorState extends State<_RuleEditor> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          TextField(
+            decoration: InputDecoration(
+              labelText: strings.t('schedule.label'),
+              hintText: strings.t('schedule.label_hint'),
+            ),
+            controller: labelController,
+          ),
           Row(
             children: [
               Text('${strings.t('schedule.start')}: ${time.format(context)}'),
@@ -210,7 +305,7 @@ class _RuleEditorState extends State<_RuleEditor> {
             children: [
               for (var day = 1; day <= 7; day++)
                 FilterChip(
-                  label: Text(day.toString()),
+                  label: Text(strings.t('schedule.day.$day')),
                   selected: days.contains(day),
                   onSelected: (_) {
                     setState(() {
@@ -233,6 +328,8 @@ class _RuleEditorState extends State<_RuleEditor> {
                     durationMinutes: duration,
                     daysOfWeek: days,
                     podId: podId,
+                    label: labelController.text,
+                    isEnabled: isEnabled,
                   ),
                 ),
                 child: Text(strings.t('schedule.save')),
@@ -240,9 +337,49 @@ class _RuleEditorState extends State<_RuleEditor> {
               const SizedBox(width: 8),
               TextButton(onPressed: widget.onCancel, child: Text(strings.t('schedule.cancel'))),
             ],
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(strings.t('schedule.enabled')),
+            value: isEnabled,
+            onChanged: (value) => setState(() => isEnabled = value),
           )
         ],
       ),
     );
   }
+}
+
+class _SummaryPill extends StatelessWidget {
+  const _SummaryPill({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.labelMedium),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _daysLabel(ScheduleRule rule, AppLocalizations strings) {
+  return rule.daysOfWeek.map((d) => strings.t('schedule.day.$d')).join(', ');
 }

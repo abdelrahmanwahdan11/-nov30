@@ -89,6 +89,7 @@ final dummyRules = <ScheduleRule>[
     startTime: const TimeOfDay(hour: 6, minute: 30),
     durationMinutes: 35,
     daysOfWeek: const [1, 3, 5],
+    label: 'Morning Mist',
   ),
   ScheduleRule(
     id: 'rule-2',
@@ -96,6 +97,8 @@ final dummyRules = <ScheduleRule>[
     startTime: const TimeOfDay(hour: 8, minute: 0),
     durationMinutes: 20,
     daysOfWeek: const [2, 4, 6],
+    label: 'Sensor Flush',
+    isEnabled: false,
   ),
   ScheduleRule(
     id: 'rule-3',
@@ -103,6 +106,7 @@ final dummyRules = <ScheduleRule>[
     startTime: const TimeOfDay(hour: 5, minute: 45),
     durationMinutes: 25,
     daysOfWeek: const [1, 2, 3, 4, 5],
+    label: 'Cooling baseline',
   ),
 ];
 

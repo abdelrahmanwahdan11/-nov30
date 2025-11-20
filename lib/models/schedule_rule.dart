@@ -7,6 +7,8 @@ class ScheduleRule {
     required this.startTime,
     required this.durationMinutes,
     required this.daysOfWeek,
+    this.label = '',
+    this.isEnabled = true,
   });
 
   final String id;
@@ -14,6 +16,8 @@ class ScheduleRule {
   final TimeOfDay startTime;
   final int durationMinutes;
   final List<int> daysOfWeek;
+  final String label;
+  final bool isEnabled;
 
   ScheduleRule copyWith({
     String? id,
@@ -21,6 +25,8 @@ class ScheduleRule {
     TimeOfDay? startTime,
     int? durationMinutes,
     List<int>? daysOfWeek,
+    String? label,
+    bool? isEnabled,
   }) {
     return ScheduleRule(
       id: id ?? this.id,
@@ -28,6 +34,8 @@ class ScheduleRule {
       startTime: startTime ?? this.startTime,
       durationMinutes: durationMinutes ?? this.durationMinutes,
       daysOfWeek: daysOfWeek ?? List.of(this.daysOfWeek),
+      label: label ?? this.label,
+      isEnabled: isEnabled ?? this.isEnabled,
     );
   }
 }
