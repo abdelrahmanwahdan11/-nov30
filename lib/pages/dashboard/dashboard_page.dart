@@ -3,6 +3,7 @@ import 'package:iconly/iconly.dart';
 
 import '../../controllers/app_controller.dart';
 import '../../controllers/dashboard_controller.dart';
+import '../../data/dummy_data.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/log_entry.dart';
 import '../../models/pod.dart';
@@ -24,6 +25,7 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   late final DashboardController dashboardController = DashboardController();
+  final Set<String> dismissedAlertIds = <String>{};
 
   @override
   Widget build(BuildContext context) {
@@ -81,6 +83,8 @@ class _DashboardPageState extends State<DashboardPage> {
                       _buildModes(strings),
                       const SizedBox(height: 16),
                       _buildGaugeSection(strings),
+                      const SizedBox(height: 16),
+                      _buildUpcoming(strings),
                       const SizedBox(height: 16),
                       _buildPodsList(strings),
                       const SizedBox(height: 16),
@@ -259,6 +263,100 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  Widget _buildUpcoming(AppLocalizations strings) {
+    return ValueListenableBuilder<Pod?>(
+      valueListenable: dashboardController.currentPod,
+      builder: (context, pod, _) {
+        if (pod == null) return const Skeleton(height: 120);
+        final rules = dummyRules.where((rule) => rule.podId == pod.id).toList()
+          ..sort(
+            (a, b) => a.startTime.hour.compareTo(b.startTime.hour),
+          );
+        if (rules.isEmpty) {
+          return GlassContainer(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(IconlyLight.calendar),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(strings.t('dashboard.upcoming.empty'))),
+                ],
+              ),
+            ),
+          );
+        }
+        return GlassContainer(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(strings.t('dashboard.upcoming.title'),
+                        style: Theme.of(context).textTheme.titleMedium),
+                    Chip(
+                      visualDensity: VisualDensity.compact,
+                      label: Text(strings.t('dashboard.next_run') +
+                          ' ${rules.first.startTime.format(context)}'),
+                    )
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...rules.map(
+                  (rule) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(rule.label, style: Theme.of(context).textTheme.titleSmall),
+                              Chip(
+                                label: Text(rule.isEnabled
+                                    ? strings.t('schedule.enabled')
+                                    : strings.t('schedule.disabled')),
+                                visualDensity: VisualDensity.compact,
+                                backgroundColor: rule.isEnabled
+                                    ? Colors.green.withOpacity(0.1)
+                                    : Colors.orange.withOpacity(0.1),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            '${rule.startTime.format(context)} · ${rule.durationMinutes} ${strings.t('schedule.mins')}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(_daysLabel(rule.daysOfWeek, strings)),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildPodsList(AppLocalizations strings) {
     return ValueListenableBuilder<List<Pod>>(
       valueListenable: dashboardController.podsSummary,
@@ -315,7 +413,9 @@ class _DashboardPageState extends State<DashboardPage> {
     return ValueListenableBuilder<List<PodAlert>>(
       valueListenable: dashboardController.alerts,
       builder: (context, alerts, child) {
-        if (alerts.isEmpty) {
+        final visibleAlerts =
+            alerts.where((alert) => !dismissedAlertIds.contains(alert.id)).toList();
+        if (visibleAlerts.isEmpty) {
           return GlassContainer(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -355,50 +455,76 @@ class _DashboardPageState extends State<DashboardPage> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                ...alerts.map((alert) {
+                ...visibleAlerts.map((alert) {
                   final color = alert.severity == 'critical'
                       ? Colors.redAccent
                       : Colors.amber;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
+                    child: Column(
                       children: [
-                        Container(
-                          height: 36,
-                          width: 36,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: color.withOpacity(0.15),
-                          ),
-                          child: Icon(
-                            alert.reason == 'offline'
-                                ? IconlyLight.danger
-                                : Icons.water_drop,
-                            color: color,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${alert.podName} • ${_alertLabel(alert, strings)}',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyLarge
-                                    ?.copyWith(fontWeight: FontWeight.w600),
+                        Row(
+                          children: [
+                            Container(
+                              height: 36,
+                              width: 36,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: color.withOpacity(0.15),
                               ),
-                              Text(
-                                alert.location,
-                                style: Theme.of(context).textTheme.bodySmall,
+                              child: Icon(
+                                alert.reason == 'offline'
+                                    ? IconlyLight.danger
+                                    : Icons.water_drop,
+                                color: color,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${alert.podName} • ${_alertLabel(alert, strings)}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge
+                                        ?.copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                  Text(
+                                    alert.location,
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              TimeOfDay.fromDateTime(alert.timestamp).format(context),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Wrap(
+                            spacing: 8,
+                            children: [
+                              TextButton.icon(
+                                icon: const Icon(Icons.snooze),
+                                label: Text(strings.t('dashboard.actions.snooze')),
+                                onPressed: () =>
+                                    _showSnack(strings.t('dashboard.actions.snooze')),
+                              ),
+                              TextButton.icon(
+                                icon: const Icon(Icons.check_circle_outline),
+                                label: Text(strings.t('dashboard.actions.resolve')),
+                                onPressed: () {
+                                  setState(() => dismissedAlertIds.add(alert.id));
+                                  _showSnack(strings.t('dashboard.actions.resolve'));
+                                },
                               ),
                             ],
                           ),
-                        ),
-                        Text(
-                          TimeOfDay.fromDateTime(alert.timestamp).format(context),
-                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
                     ),
@@ -485,12 +611,21 @@ class _DashboardPageState extends State<DashboardPage> {
       },
     );
   }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
 }
 
 String _statusText(Pod pod, AppLocalizations strings) {
   if (pod.waterLevelPercent < 0.4) return strings.t('common.status.low');
   if (pod.waterLevelPercent < 0.7) return strings.t('common.status.medium');
   return strings.t('common.status.full');
+}
+
+String _daysLabel(List<int> days, AppLocalizations strings) {
+  return days.map((d) => strings.t('schedule.day.$d')).join(', ');
 }
 
 String _alertLabel(PodAlert alert, AppLocalizations strings) {

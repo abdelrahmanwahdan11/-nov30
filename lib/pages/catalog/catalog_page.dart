@@ -57,11 +57,11 @@ class _CatalogPageState extends State<CatalogPage> {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: strings.t('catalog.search_hint'),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: TextField(
+            decoration: InputDecoration(
+              hintText: strings.t('catalog.search_hint'),
                 prefixIcon: const Icon(IconlyLight.search),
                 filled: true,
                 fillColor: Theme.of(context).cardColor,
@@ -232,6 +232,10 @@ class _PodSearchDelegate extends SearchDelegate<Pod?> {
                     ListTile(
                       leading: const Icon(Icons.history),
                       title: Text(recent),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => controller.removeRecentQuery(recent),
+                      ),
                       onTap: () {
                         query = recent;
                         controller.applySearch(recent);
@@ -294,19 +298,47 @@ class _Filters extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(strings.t('filters.title'), style: Theme.of(context).textTheme.titleSmall),
-              TextButton(
-                onPressed: controller.resetFilters,
-                child: Text(strings.t('catalog.filters.reset')),
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(strings.t('filters.title'), style: Theme.of(context).textTheme.titleSmall),
+                Row(
+                  children: [
+                    ValueListenableBuilder<String>(
+                      valueListenable: controller.sortBy,
+                      builder: (context, sort, _) {
+                        return DropdownButton<String>(
+                          value: sort,
+                          underline: const SizedBox.shrink(),
+                          onChanged: (value) =>
+                              controller.updateSort(value ?? controller.sortBy.value),
+                          items: [
+                            ('relevance', strings.t('catalog.sort.relevance')),
+                            ('name', strings.t('catalog.sort.name')),
+                            ('water', strings.t('catalog.sort.water')),
+                            ('status', strings.t('catalog.sort.status')),
+                          ]
+                              .map(
+                                (option) => DropdownMenuItem(
+                                  value: option.$1,
+                                  child: Text('${strings.t('catalog.sort.title')}: ${option.$2}'),
+                                ),
+                              )
+                              .toList(),
+                        );
+                      },
+                    ),
+                    TextButton(
+                      onPressed: controller.resetFilters,
+                      child: Text(strings.t('catalog.filters.reset')),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: ValueListenableBuilder<bool>(

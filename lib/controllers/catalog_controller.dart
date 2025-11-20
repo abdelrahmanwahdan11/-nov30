@@ -7,8 +7,7 @@ import '../models/pod.dart';
 class CatalogController {
   CatalogController() {
     items.value = List.of(_allPods);
-    isLoading.value = false;
-    _restoreFavorites();
+    _init();
   }
 
   final List<Pod> _allPods = List.of(dummyPods);
@@ -23,8 +22,18 @@ class CatalogController {
   final ValueNotifier<Set<String>> favoriteIds = ValueNotifier(<String>{});
   final ValueNotifier<bool> favoritesOnly = ValueNotifier(false);
   final ValueNotifier<List<String>> recentQueries = ValueNotifier(const []);
+  final ValueNotifier<String> sortBy = ValueNotifier('relevance');
 
   static const _favoritesKey = 'catalog_favorites';
+  static const _recentKey = 'catalog_recents';
+
+  Future<void> _init() async {
+    isLoading.value = true;
+    await _restoreFavorites();
+    await _restoreRecentQueries();
+    _applyFilters();
+    isLoading.value = false;
+  }
 
   List<String> get availableLocations => {
         for (final pod in _allPods) pod.location,
@@ -44,6 +53,13 @@ class CatalogController {
 
   void clearRecentQueries() {
     recentQueries.value = const [];
+    _persistRecentQueries();
+  }
+
+  void removeRecentQuery(String query) {
+    final next = recentQueries.value.where((element) => element != query).toList();
+    recentQueries.value = next;
+    _persistRecentQueries();
   }
 
   void toggleStatus(String status) {
@@ -102,7 +118,11 @@ class CatalogController {
     }
     favoriteIds.value = saved.toSet();
     _syncFavorites();
-    _applyFilters();
+  }
+
+  Future<void> _restoreRecentQueries() async {
+    final prefs = await SharedPreferences.getInstance();
+    recentQueries.value = prefs.getStringList(_recentKey) ?? const [];
   }
 
   Future<void> toggleFavorite(String podId) async {
@@ -119,6 +139,11 @@ class CatalogController {
 
   void toggleFavoritesOnly() {
     favoritesOnly.value = !favoritesOnly.value;
+    _applyFilters();
+  }
+
+  void updateSort(String sort) {
+    sortBy.value = sort;
     _applyFilters();
   }
 
@@ -176,6 +201,23 @@ class CatalogController {
     if (favoritesOnly.value) {
       filtered = filtered.where((pod) => pod.isFavorite).toList();
     }
+    switch (sortBy.value) {
+      case 'name':
+        filtered.sort((a, b) => a.name.compareTo(b.name));
+        break;
+      case 'water':
+        filtered.sort((b, a) => a.waterLevelPercent.compareTo(b.waterLevelPercent));
+        break;
+      case 'status':
+        filtered.sort((a, b) {
+          final onlineCompare = (b.isOnline ? 1 : 0).compareTo(a.isOnline ? 1 : 0);
+          if (onlineCompare != 0) return onlineCompare;
+          return b.waterLevelPercent.compareTo(a.waterLevelPercent);
+        });
+        break;
+      default:
+        break;
+    }
     items.value = filtered;
     if (filtered.isEmpty) {
       isLoading.value = false;
@@ -197,6 +239,12 @@ class CatalogController {
     if (trimmed.isEmpty) return;
     final next = [trimmed, ...recentQueries.value.where((q) => q != trimmed)];
     recentQueries.value = next.take(6).toList();
+    _persistRecentQueries();
+  }
+
+  Future<void> _persistRecentQueries() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_recentKey, recentQueries.value);
   }
 
   String _statusFor(Pod pod) {
