@@ -23,7 +23,7 @@ class ShellPage extends StatefulWidget {
 }
 
 class _ShellPageState extends State<ShellPage> {
-  int currentIndex = 0;
+  late int currentIndex;
 
   late final pages = [
     DashboardPage(controller: widget.appController),
@@ -34,6 +34,25 @@ class _ShellPageState extends State<ShellPage> {
     const AnalyticsPage(),
     SettingsPage(appController: widget.appController),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    currentIndex = widget.appController.lastTabIndex;
+    widget.appController.addListener(_handleControllerChange);
+  }
+
+  @override
+  void dispose() {
+    widget.appController.removeListener(_handleControllerChange);
+    super.dispose();
+  }
+
+  void _handleControllerChange() {
+    if (currentIndex != widget.appController.lastTabIndex) {
+      setState(() => currentIndex = widget.appController.lastTabIndex);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +107,10 @@ class _ShellPageState extends State<ShellPage> {
           children: List.generate(icons.length, (index) {
             final active = currentIndex == index;
             return GestureDetector(
-              onTap: () => setState(() => currentIndex = index),
+              onTap: () {
+                setState(() => currentIndex = index);
+                widget.appController.updateLastTab(index);
+              },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 padding: const EdgeInsets.all(10),
@@ -115,7 +137,10 @@ class _ShellPageState extends State<ShellPage> {
           NavigationRail(
             extended: true,
             selectedIndex: currentIndex,
-            onDestinationSelected: (value) => setState(() => currentIndex = value),
+            onDestinationSelected: (value) {
+              setState(() => currentIndex = value);
+              widget.appController.updateLastTab(value);
+            },
             destinations: [
               for (var i = 0; i < icons.length; i++)
                 NavigationRailDestination(

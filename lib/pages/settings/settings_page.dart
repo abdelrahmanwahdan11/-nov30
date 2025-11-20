@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:iconly/iconly.dart';
 
+import '../../data/dummy_data.dart';
 import '../../controllers/app_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/glass_container.dart';
@@ -103,6 +107,12 @@ class SettingsPage extends StatelessWidget {
               onChanged: appController.updateAlerts,
             ),
             ListTile(
+              leading: const Icon(IconlyLight.download),
+              title: Text(strings.t('settings.export')),
+              subtitle: Text(strings.t('settings.export_desc')),
+              onTap: () => _copySnapshot(context, strings),
+            ),
+            ListTile(
               leading: const Icon(IconlyLight.play),
               title: Text(strings.t('settings.onboarding_title')),
               subtitle: Text(strings.t('settings.onboarding_subtitle')),
@@ -133,6 +143,32 @@ class SettingsPage extends StatelessWidget {
       },
     );
   }
+  Future<void> _copySnapshot(BuildContext context, AppLocalizations strings) async {
+    final podLines = dummyPods.map((pod) {
+      final statusKey = pod.isOnline ? 'common.status.online' : 'common.status.offline';
+      return '${pod.name} (${pod.location}) • ${(pod.waterLevelPercent * 100).toStringAsFixed(0)}% ${strings.t(statusKey)}';
+    }).toList();
+    final ruleLines = dummyRules
+        .map((rule) =>
+            '${rule.label} → ${rule.startTime.format(context)} (${rule.durationMinutes}m) [${rule.daysOfWeek.join(',')}]')
+        .toList();
+    final maintenanceLines = dummyMaintenanceTasks
+        .map((task) => '${task.title} • ${task.priority.name} (${task.dueDate.toLocal()})')
+        .toList();
+
+    final snapshot = {
+      'pods': podLines,
+      'rules': ruleLines,
+      'maintenance': maintenanceLines,
+    };
+
+    await Clipboard.setData(ClipboardData(text: const JsonEncoder.withIndent('  ').convert(snapshot)));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(strings.t('settings.exported'))));
+    }
+  }
+
 }
 
 class _ThemePreview extends StatelessWidget {

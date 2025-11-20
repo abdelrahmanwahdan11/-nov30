@@ -87,6 +87,8 @@ class _DashboardPageState extends State<DashboardPage> {
                       const SizedBox(height: 16),
                       _buildGaugeSection(strings),
                       const SizedBox(height: 16),
+                      _buildInsights(strings),
+                      const SizedBox(height: 16),
                       _buildMaintenance(strings),
                       const SizedBox(height: 16),
                       _buildUpcoming(strings),
@@ -148,41 +150,125 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildMetrics(AppLocalizations strings) {
-    final metrics = [
-      (strings.t('dashboard.metrics.online'), '6/8'),
-      (strings.t('dashboard.metrics.humidity'), '64%'),
-      (strings.t('dashboard.metrics.temperature'), '22°C'),
-    ];
-    return Row(
-      children: metrics
-          .map(
-            (metric) => Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(6),
-                child: GlassContainer(
+    return ValueListenableBuilder<List<Pod>>(
+      valueListenable: dashboardController.podsSummary,
+      builder: (context, pods, _) {
+        final online = pods.where((pod) => pod.isOnline).length;
+        final avgHumidity = pods.isEmpty
+            ? 0
+            : pods.map((pod) => pod.humidityPercent).reduce((a, b) => a + b) / pods.length;
+        final avgTemp = pods.isEmpty
+            ? 0
+            : pods.map((pod) => pod.waterTemperature).reduce((a, b) => a + b) / pods.length;
+        final metrics = [
+          (strings.t('dashboard.metrics.online'), '$online/${pods.length}'),
+          (strings.t('dashboard.metrics.humidity'), '${(avgHumidity * 100).toStringAsFixed(0)}%'),
+          (strings.t('dashboard.metrics.temperature'), '${avgTemp.toStringAsFixed(1)}°C'),
+        ];
+        return Row(
+          children: metrics
+              .map(
+                (metric) => Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(metric.$1, style: Theme.of(context).textTheme.labelMedium),
-                        const SizedBox(height: 8),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 400),
-                          child: Text(
-                            metric.$2,
-                            key: ValueKey(metric.$2),
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
+                    padding: const EdgeInsets.all(6),
+                    child: GlassContainer(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(metric.$1, style: Theme.of(context).textTheme.labelMedium),
+                            const SizedBox(height: 8),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 400),
+                              child: Text(
+                                metric.$2,
+                                key: ValueKey(metric.$2),
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
+              )
+              .toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildInsights(AppLocalizations strings) {
+    return ValueListenableBuilder<List<Pod>>(
+      valueListenable: dashboardController.podsSummary,
+      builder: (context, pods, _) {
+        if (pods.isEmpty) return const SizedBox.shrink();
+        final fullest = pods.reduce((a, b) => a.waterLevelPercent >= b.waterLevelPercent ? a : b);
+        final driest = pods.reduce((a, b) => a.waterLevelPercent <= b.waterLevelPercent ? a : b);
+        final offlineCount = pods.where((pod) => !pod.isOnline).length;
+        final cards = [
+          (
+            strings.t('dashboard.insights.fullest'),
+            fullest,
+            '${(fullest.waterLevelPercent * 100).toStringAsFixed(0)}%',
+          ),
+          (
+            strings.t('dashboard.insights.driest'),
+            driest,
+            '${(driest.waterLevelPercent * 100).toStringAsFixed(0)}%',
+          ),
+          (
+            strings.t('dashboard.insights.offline'),
+            null,
+            offlineCount.toString(),
+          ),
+        ];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(strings.t('dashboard.insights.title'),
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Row(
+              children: cards
+                  .map(
+                    (card) => Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: GlassContainer(
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(card.$1, style: Theme.of(context).textTheme.bodySmall),
+                                const SizedBox(height: 6),
+                                Text(card.$3, style: Theme.of(context).textTheme.titleLarge),
+                                if (card.$2 != null) ...[
+                                  const SizedBox(height: 6),
+                                  Text((card.$2 as Pod).name,
+                                      style: Theme.of(context).textTheme.bodyMedium),
+                                  Text((card.$2 as Pod).location,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(color: Theme.of(context).hintColor)),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
-          )
-          .toList(),
+          ],
+        );
+      },
     );
   }
 
