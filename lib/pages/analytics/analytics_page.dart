@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:iconly/iconly.dart';
 
 import '../../controllers/analytics_controller.dart';
@@ -66,8 +67,17 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           Align(
                             alignment: Alignment.centerRight,
                             child: IconButton(
-                              icon: const Icon(IconlyLight.info_square),
-                              onPressed: () {},
+                              icon: const Icon(IconlyLight.download),
+                              tooltip: strings.t('analytics.export'),
+                              onPressed: () async {
+                                final summary = _buildExport(points, strings);
+                                await Clipboard.setData(ClipboardData(text: summary));
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(strings.t('analytics.exported'))),
+                                  );
+                                }
+                              },
                             ),
                           ),
                           Expanded(
@@ -80,6 +90,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 12),
+                          _TrendRow(points: points, label: strings.t('analytics.trend_label')),
                           const SizedBox(height: 12),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -128,6 +140,22 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       points.isEmpty ? 0 : points.map((e) => e.value).reduce((a, b) => a > b ? a : b);
   double _avg(List<AnalyticsPoint> points) =>
       points.isEmpty ? 0 : points.map((e) => e.value).reduce((a, b) => a + b) / points.length;
+
+  String _buildExport(List<AnalyticsPoint> points, AppLocalizations strings) {
+    final min = _min(points).toStringAsFixed(1);
+    final avg = _avg(points).toStringAsFixed(1);
+    final max = _max(points).toStringAsFixed(1);
+    final trend = _trend(points);
+    return '${strings.t('analytics.title')}\n${strings.t('analytics.summary.min')}: $min\n${strings.t('analytics.summary.avg')}: $avg\n${strings.t('analytics.summary.max')}: $max\n${strings.t('analytics.trend_label')}: ${trend.toStringAsFixed(1)}%';
+  }
+
+  double _trend(List<AnalyticsPoint> points) {
+    if (points.length < 2) return 0;
+    final start = points.first.value;
+    final end = points.last.value;
+    if (start == 0) return 0;
+    return ((end - start) / start) * 100;
+  }
 }
 
 class _Chart extends StatelessWidget {
@@ -178,6 +206,36 @@ class _ChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ChartPainter oldDelegate) => oldDelegate.points != points;
+}
+
+class _TrendRow extends StatelessWidget {
+  const _TrendRow({required this.points, required this.label});
+
+  final List<AnalyticsPoint> points;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    if (points.length < 2) return const SizedBox.shrink();
+    final start = points.first.value;
+    final end = points.last.value;
+    final delta = start == 0 ? 0 : ((end - start) / start) * 100;
+    final isUp = delta >= 0;
+    final icon = isUp ? Icons.trending_up : Icons.trending_down;
+    final color = isUp ? Colors.green : Colors.orange;
+    return Row(
+      children: [
+        Icon(icon, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            '$label ${delta.toStringAsFixed(1)}%',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: color),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _SummaryTile extends StatelessWidget {

@@ -12,18 +12,21 @@ class AppController extends ChangeNotifier {
   static const _colorKey = 'primary_color';
   static const _localeKey = 'locale';
   static const _alertsKey = 'alerts_enabled';
+  static const _onboardingKey = 'onboarding_complete';
 
   ThemeMode _themeMode = ThemeMode.system;
   Color _primaryColor = const Color(0xFF909D92);
   Locale _locale = const Locale('en');
   bool _initialized = false;
   bool _alertsEnabled = true;
+  bool _onboardingComplete = false;
 
   ThemeMode get themeMode => _themeMode;
   Color get primaryColor => _primaryColor;
   Locale get locale => _locale;
   bool get initialized => _initialized;
   bool get alertsEnabled => _alertsEnabled;
+  bool get onboardingComplete => _onboardingComplete;
 
   Future<void> _init() async {
     final prefs = await SharedPreferences.getInstance();
@@ -37,6 +40,7 @@ class AppController extends ChangeNotifier {
       _locale = Locale(localeCode);
     }
     _alertsEnabled = prefs.getBool(_alertsKey) ?? true;
+    _onboardingComplete = prefs.getBool(_onboardingKey) ?? false;
     _initialized = true;
     notifyListeners();
   }
@@ -69,16 +73,32 @@ class AppController extends ChangeNotifier {
     await prefs.setBool(_alertsKey, value);
   }
 
+  Future<void> completeOnboarding() async {
+    _onboardingComplete = true;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_onboardingKey, true);
+  }
+
+  Future<void> resetOnboarding() async {
+    _onboardingComplete = false;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_onboardingKey, false);
+  }
+
   Future<void> clearPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_themeKey);
     await prefs.remove(_colorKey);
     await prefs.remove(_localeKey);
     await prefs.remove(_alertsKey);
+    await prefs.remove(_onboardingKey);
     _themeMode = ThemeMode.system;
     _primaryColor = const Color(0xFF909D92);
     _locale = const Locale('en');
     _alertsEnabled = true;
+    _onboardingComplete = false;
     notifyListeners();
   }
 }

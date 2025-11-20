@@ -212,29 +212,59 @@ class _PodSearchDelegate extends SearchDelegate<Pod?> {
   Widget buildSuggestions(BuildContext context) {
     final strings = AppLocalizations.of(context);
     controller.applySearch(query);
-    return ValueListenableBuilder<List<Pod>>(
-      valueListenable: controller.items,
-      builder: (context, pods, child) {
-        return ListView.builder(
-          itemCount: pods.length,
-          itemBuilder: (context, index) {
-            final pod = pods[index];
-            return ListTile(
-              title: Text(pod.name),
-              subtitle: Text('${pod.location} • ${_statusText(pod, strings)}'),
-              trailing: IconButton(
-                icon: Icon(
-                  pod.isFavorite ? Icons.favorite : Icons.favorite_border,
-                  color: pod.isFavorite ? Colors.pinkAccent : null,
-                ),
-                onPressed: () => controller.toggleFavorite(pod.id),
-              ),
-              onTap: () => close(context, pod),
-            );
-          },
-        );
-      },
-    );
+    return query.isEmpty
+        ? ValueListenableBuilder<List<String>>(
+            valueListenable: controller.recentQueries,
+            builder: (context, recents, _) {
+              if (recents.isEmpty) {
+                return Center(child: Text(strings.t('catalog.search_hint')));
+              }
+              return ListView(
+                children: [
+                  ListTile(
+                    title: Text(strings.t('catalog.recent_title')),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_sweep_outlined),
+                      onPressed: controller.clearRecentQueries,
+                    ),
+                  ),
+                  for (final recent in recents)
+                    ListTile(
+                      leading: const Icon(Icons.history),
+                      title: Text(recent),
+                      onTap: () {
+                        query = recent;
+                        controller.applySearch(recent);
+                        showResults(context);
+                      },
+                    )
+                ],
+              );
+            },
+          )
+        : ValueListenableBuilder<List<Pod>>(
+            valueListenable: controller.items,
+            builder: (context, pods, child) {
+              return ListView.builder(
+                itemCount: pods.length,
+                itemBuilder: (context, index) {
+                  final pod = pods[index];
+                  return ListTile(
+                    title: Text(pod.name),
+                    subtitle: Text('${pod.location} • ${_statusText(pod, strings)}'),
+                    trailing: IconButton(
+                      icon: Icon(
+                        pod.isFavorite ? Icons.favorite : Icons.favorite_border,
+                        color: pod.isFavorite ? Colors.pinkAccent : null,
+                      ),
+                      onPressed: () => controller.toggleFavorite(pod.id),
+                    ),
+                    onTap: () => close(context, pod),
+                  );
+                },
+              );
+            },
+          );
   }
 
   @override

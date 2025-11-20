@@ -22,6 +22,7 @@ class CatalogController {
   final ValueNotifier<Set<String>> elementFilters = ValueNotifier(<String>{});
   final ValueNotifier<Set<String>> favoriteIds = ValueNotifier(<String>{});
   final ValueNotifier<bool> favoritesOnly = ValueNotifier(false);
+  final ValueNotifier<List<String>> recentQueries = ValueNotifier(const []);
 
   static const _favoritesKey = 'catalog_favorites';
 
@@ -37,7 +38,12 @@ class CatalogController {
 
   void applySearch(String query) {
     searchQuery.value = query;
+    _trackRecentQuery(query);
     _applyFilters();
+  }
+
+  void clearRecentQueries() {
+    recentQueries.value = const [];
   }
 
   void toggleStatus(String status) {
@@ -184,6 +190,13 @@ class CatalogController {
         _allPods[i] = pod.copyWith(isFavorite: isFavorite);
       }
     }
+  }
+
+  void _trackRecentQuery(String query) {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return;
+    final next = [trimmed, ...recentQueries.value.where((q) => q != trimmed)];
+    recentQueries.value = next.take(6).toList();
   }
 
   String _statusFor(Pod pod) {

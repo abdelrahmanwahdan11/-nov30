@@ -33,6 +33,7 @@ class _WaterPodAppState extends State<WaterPodApp> {
         if (!controller.initialized) {
           return const MaterialApp(home: SizedBox());
         }
+        final initialRoute = controller.onboardingComplete ? '/auth/login' : '/onboarding';
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'WaterPod',
@@ -48,14 +49,14 @@ class _WaterPodAppState extends State<WaterPodApp> {
             GlobalWidgetsLocalizations.delegate,
           ],
           routes: {
-            '/onboarding': (context) => const OnboardingPage(),
+            '/onboarding': (context) => OnboardingPage(appController: controller),
             '/auth/login': (context) => LoginPage(controller: controller),
             '/auth/signup': (context) => const SignUpPage(),
             '/auth/forgot': (context) => const ForgotPasswordPage(),
             '/auth/verify': (context) => const VerifyAccountPage(),
             '/shell': (context) => ShellPage(appController: controller),
           },
-          initialRoute: '/onboarding',
+          initialRoute: initialRoute,
         );
       },
     );

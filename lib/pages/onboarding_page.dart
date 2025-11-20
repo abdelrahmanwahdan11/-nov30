@@ -2,10 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../controllers/app_controller.dart';
 import '../l10n/app_localizations.dart';
 
 class OnboardingPage extends StatefulWidget {
-  const OnboardingPage({super.key});
+  const OnboardingPage({super.key, required this.appController});
+
+  final AppController appController;
 
   @override
   State<OnboardingPage> createState() => _OnboardingPageState();
@@ -124,14 +127,22 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     TextButton(
-                      onPressed: () => Navigator.pushReplacementNamed(context, '/auth/login'),
+                      onPressed: () async {
+                        await widget.appController.completeOnboarding();
+                        if (context.mounted) {
+                          Navigator.pushReplacementNamed(context, '/auth/login');
+                        }
+                      },
                       child: Text(strings.t('onboarding.skip')),
                     ),
                     ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         final next = (currentIndex + 1).clamp(0, pageKeys.length - 1);
                         if (next == currentIndex) {
-                          Navigator.pushReplacementNamed(context, '/auth/login');
+                          await widget.appController.completeOnboarding();
+                          if (context.mounted) {
+                            Navigator.pushReplacementNamed(context, '/auth/login');
+                          }
                         } else {
                           controller.nextPage(
                             duration: const Duration(milliseconds: 600),

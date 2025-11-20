@@ -102,6 +102,20 @@ class SettingsPage extends StatelessWidget {
               value: appController.alertsEnabled,
               onChanged: appController.updateAlerts,
             ),
+            ListTile(
+              leading: const Icon(IconlyLight.play),
+              title: Text(strings.t('settings.onboarding_title')),
+              subtitle: Text(strings.t('settings.onboarding_subtitle')),
+              trailing: const Icon(Icons.refresh),
+              onTap: () async {
+                await appController.resetOnboarding();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(strings.t('settings.onboarding_reset'))),
+                  );
+                }
+              },
+            ),
             ElevatedButton.icon(
               onPressed: () async {
                 await appController.clearPreferences();
