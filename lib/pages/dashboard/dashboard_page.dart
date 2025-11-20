@@ -6,6 +6,7 @@ import '../../controllers/dashboard_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/log_entry.dart';
 import '../../models/pod.dart';
+import '../../models/pod_alert.dart';
 import '../../utils/audio_stub.dart';
 import '../../widgets/ai_info_button.dart';
 import '../../widgets/glass_container.dart';
@@ -82,6 +83,8 @@ class _DashboardPageState extends State<DashboardPage> {
                       _buildGaugeSection(strings),
                       const SizedBox(height: 16),
                       _buildPodsList(strings),
+                      const SizedBox(height: 16),
+                      _buildAlerts(strings),
                       const SizedBox(height: 16),
                       _buildRecentActivity(strings),
                     ],
@@ -308,6 +311,107 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  Widget _buildAlerts(AppLocalizations strings) {
+    return ValueListenableBuilder<List<PodAlert>>(
+      valueListenable: dashboardController.alerts,
+      builder: (context, alerts, child) {
+        if (alerts.isEmpty) {
+          return GlassContainer(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(IconlyLight.shield_done),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(strings.t('dashboard.alerts.empty')),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return GlassContainer(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      strings.t('dashboard.alerts.title'),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    IconButton(
+                      icon: const Icon(IconlyLight.danger),
+                      tooltip: strings.t('dashboard.refresh'),
+                      onPressed: () {
+                        playAlertSound('onPodOffline');
+                        dashboardController.refresh();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...alerts.map((alert) {
+                  final color = alert.severity == 'critical'
+                      ? Colors.redAccent
+                      : Colors.amber;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        Container(
+                          height: 36,
+                          width: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: color.withOpacity(0.15),
+                          ),
+                          child: Icon(
+                            alert.reason == 'offline'
+                                ? IconlyLight.danger
+                                : Icons.water_drop,
+                            color: color,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${alert.podName} • ${_alertLabel(alert, strings)}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              Text(
+                                alert.location,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          TimeOfDay.fromDateTime(alert.timestamp).format(context),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildRecentActivity(AppLocalizations strings) {
     return ValueListenableBuilder<List<LogEntry>>(
       valueListenable: dashboardController.recentLogs,
@@ -387,4 +491,15 @@ String _statusText(Pod pod, AppLocalizations strings) {
   if (pod.waterLevelPercent < 0.4) return strings.t('common.status.low');
   if (pod.waterLevelPercent < 0.7) return strings.t('common.status.medium');
   return strings.t('common.status.full');
+}
+
+String _alertLabel(PodAlert alert, AppLocalizations strings) {
+  switch (alert.reason) {
+    case 'offline':
+      return strings.t('dashboard.alerts.offline');
+    case 'lowWater':
+      return strings.t('dashboard.alerts.low_water');
+    default:
+      return strings.t('dashboard.alerts.title');
+  }
 }
