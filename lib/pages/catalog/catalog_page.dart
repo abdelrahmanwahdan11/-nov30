@@ -1,0 +1,514 @@
+import 'package:flutter/material.dart';
+import 'package:iconly/iconly.dart';
+
+import '../../controllers/catalog_controller.dart';
+import '../../l10n/app_localizations.dart';
+import '../../models/pod.dart';
+import '../../widgets/ai_info_button.dart';
+import '../../widgets/glass_container.dart';
+import '../../widgets/skeleton.dart';
+import '../catalog_detail/catalog_detail_sheet.dart';
+
+class CatalogPage extends StatefulWidget {
+  const CatalogPage({super.key});
+
+  @override
+  State<CatalogPage> createState() => _CatalogPageState();
+}
+
+class _CatalogPageState extends State<CatalogPage> {
+  final CatalogController controller = CatalogController();
+  final ScrollController scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (scrollController.position.pixels >
+        scrollController.position.maxScrollExtent - 200) {
+      controller.loadMore();
+    }
+  }
+
+  @override
+  void dispose() {
+    scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(strings.t('catalog.title')),
+        actions: [
+          IconButton(
+            icon: const Icon(IconlyLight.search),
+            onPressed: () => showSearch(
+              context: context,
+              delegate: _PodSearchDelegate(controller),
+            ),
+          )
+        ],
+      ),
+      body: Column(
+        children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: TextField(
+            decoration: InputDecoration(
+              hintText: strings.t('catalog.search_hint'),
+                prefixIcon: const Icon(IconlyLight.search),
+                filled: true,
+                fillColor: Theme.of(context).cardColor,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onChanged: controller.applySearch,
+            ),
+          ),
+          _Filters(controller: controller, strings: strings),
+          Expanded(
+            child: ValueListenableBuilder<List<Pod>>(
+              valueListenable: controller.items,
+              builder: (context, pods, child) {
+                return ValueListenableBuilder<bool>(
+                  valueListenable: controller.isLoading,
+                  builder: (context, loading, _) {
+                    if (loading && pods.isEmpty) {
+                      return const _CatalogSkeleton();
+                    }
+                    if (pods.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(IconlyLight.close_square),
+                            const SizedBox(height: 12),
+                            Text(strings.t('catalog.filters.reset')),
+                            TextButton(
+                              onPressed: controller.resetFilters,
+                              child: Text(strings.t('catalog.filters.reset')),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return GridView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: ResponsiveBreakpoints.columns(context),
+                        childAspectRatio: 0.8,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
+                      itemCount: pods.length,
+                      itemBuilder: (context, index) {
+                        final pod = pods[index];
+                        final elementLabel =
+                            strings.t('catalog.element.${pod.elementType}');
+                        return Hero(
+                          tag: pod.id,
+                          child: GlassContainer(
+                            onTap: () => showDialog(
+                              context: context,
+                              builder: (_) => CatalogDetailSheet(
+                                pod: pod,
+                                onToggleFavorite: controller.toggleFavorite,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: Stack(
+                                    children: [
+                                      Positioned.fill(
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(20),
+                                          child:
+                                              Image.network(pod.imageUrl, fit: BoxFit.cover),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        top: 8,
+                                        right: 8,
+                                        child: _FavoriteButton(
+                                          isFavorite: pod.isFavorite,
+                                          onPressed: () =>
+                                              controller.toggleFavorite(pod.id),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                ListTile(
+                                  title: Text(pod.name),
+                                  subtitle: Text(
+                                    '${pod.location} • $elementLabel • ${_statusText(pod, strings)}',
+                                  ),
+                                  trailing: const AiInfoButton(),
+                                ),
+                                if (pod.tags.isNotEmpty)
+                                  Padding(
+                                    padding:
+                                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    child: Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: [
+                                        for (final tag in pod.tags)
+                                          Chip(
+                                            label: Text(tag),
+                                            visualDensity: VisualDensity.compact,
+                                          )
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          ValueListenableBuilder<bool>(
+            valueListenable: controller.isLoading,
+            builder: (context, loading, child) {
+              if (!loading) return const SizedBox.shrink();
+              return const Padding(
+                padding: EdgeInsets.all(16),
+                child: Skeleton(height: 24, width: 120),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PodSearchDelegate extends SearchDelegate<Pod?> {
+  _PodSearchDelegate(this.controller);
+
+  final CatalogController controller;
+
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => close(context, null));
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    controller.applySearch(query);
+    return query.isEmpty
+        ? ValueListenableBuilder<List<String>>(
+            valueListenable: controller.recentQueries,
+            builder: (context, recents, _) {
+              if (recents.isEmpty) {
+                return Center(child: Text(strings.t('catalog.search_hint')));
+              }
+              return ListView(
+                children: [
+                  ListTile(
+                    title: Text(strings.t('catalog.recent_title')),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_sweep_outlined),
+                      onPressed: controller.clearRecentQueries,
+                    ),
+                  ),
+                  for (final recent in recents)
+                    ListTile(
+                      leading: const Icon(Icons.history),
+                      title: Text(recent),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => controller.removeRecentQuery(recent),
+                      ),
+                      onTap: () {
+                        query = recent;
+                        controller.applySearch(recent);
+                        showResults(context);
+                      },
+                    )
+                ],
+              );
+            },
+          )
+        : ValueListenableBuilder<List<Pod>>(
+            valueListenable: controller.items,
+            builder: (context, pods, child) {
+              return ListView.builder(
+                itemCount: pods.length,
+                itemBuilder: (context, index) {
+                  final pod = pods[index];
+                  return ListTile(
+                    title: Text(pod.name),
+                    subtitle: Text('${pod.location} • ${_statusText(pod, strings)}'),
+                    trailing: IconButton(
+                      icon: Icon(
+                        pod.isFavorite ? Icons.favorite : Icons.favorite_border,
+                        color: pod.isFavorite ? Colors.pinkAccent : null,
+                      ),
+                      onPressed: () => controller.toggleFavorite(pod.id),
+                    ),
+                    onTap: () => close(context, pod),
+                  );
+                },
+              );
+            },
+          );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) => buildSuggestions(context);
+}
+
+class _Filters extends StatelessWidget {
+  const _Filters({required this.controller, required this.strings});
+
+  final CatalogController controller;
+  final AppLocalizations strings;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusChips = [
+      ('low', strings.t('common.status.low')),
+      ('medium', strings.t('common.status.medium')),
+      ('full', strings.t('common.status.full')),
+    ];
+    final onlineChips = [
+      ('online', strings.t('catalog.filters.online_label')),
+      ('offline', strings.t('catalog.filters.offline')),
+    ];
+    final elementChips = controller.elementTypes
+        .map((type) => (type, strings.t('catalog.element.$type')))
+        .toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(strings.t('filters.title'), style: Theme.of(context).textTheme.titleSmall),
+                Row(
+                  children: [
+                    ValueListenableBuilder<String>(
+                      valueListenable: controller.sortBy,
+                      builder: (context, sort, _) {
+                        return DropdownButton<String>(
+                          value: sort,
+                          underline: const SizedBox.shrink(),
+                          onChanged: (value) =>
+                              controller.updateSort(value ?? controller.sortBy.value),
+                          items: [
+                            ('relevance', strings.t('catalog.sort.relevance')),
+                            ('name', strings.t('catalog.sort.name')),
+                            ('water', strings.t('catalog.sort.water')),
+                            ('status', strings.t('catalog.sort.status')),
+                          ]
+                              .map(
+                                (option) => DropdownMenuItem(
+                                  value: option.$1,
+                                  child: Text('${strings.t('catalog.sort.title')}: ${option.$2}'),
+                                ),
+                              )
+                              .toList(),
+                        );
+                      },
+                    ),
+                    TextButton(
+                      onPressed: controller.resetFilters,
+                      child: Text(strings.t('catalog.filters.reset')),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: ValueListenableBuilder<bool>(
+            valueListenable: controller.favoritesOnly,
+            builder: (context, favsOnly, _) {
+              return FilterChip(
+                avatar: Icon(
+                  favsOnly ? Icons.favorite : Icons.favorite_border,
+                  size: 18,
+                ),
+                selected: favsOnly,
+                label: Text(strings.t('catalog.filters.favorites')),
+                onSelected: (_) => controller.toggleFavoritesOnly(),
+              );
+            },
+          ),
+        ),
+        SizedBox(
+          height: 48,
+          child: ValueListenableBuilder<Set<String>>(
+            valueListenable: controller.statusFilters,
+            builder: (context, selected, _) {
+              return ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  for (final chip in statusChips)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(chip.$2),
+                        selected: selected.contains(chip.$1),
+                        onSelected: (_) => controller.toggleStatus(chip.$1),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+        SizedBox(
+          height: 48,
+          child: ValueListenableBuilder<Set<String>>(
+            valueListenable: controller.onlineFilters,
+            builder: (context, selected, _) {
+              return ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  for (final chip in onlineChips)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(chip.$2),
+                        selected: selected.contains(chip.$1),
+                        onSelected: (_) => controller.toggleOnline(chip.$1),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+        SizedBox(
+          height: 48,
+          child: ValueListenableBuilder<Set<String>>(
+            valueListenable: controller.locationFilters,
+            builder: (context, selected, _) {
+              return ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  for (final location in controller.availableLocations)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(location),
+                        selected: selected.contains(location),
+                        onSelected: (_) => controller.toggleLocation(location),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+        SizedBox(
+          height: 48,
+          child: ValueListenableBuilder<Set<String>>(
+            valueListenable: controller.elementFilters,
+            builder: (context, selected, _) {
+              return ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  for (final chip in elementChips)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(chip.$2),
+                        selected: selected.contains(chip.$1),
+                        onSelected: (_) => controller.toggleElement(chip.$1),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CatalogSkeleton extends StatelessWidget {
+  const _CatalogSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 6,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: ResponsiveBreakpoints.columns(context),
+        childAspectRatio: 0.8,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemBuilder: (context, index) {
+        return const Skeleton();
+      },
+    );
+  }
+}
+
+class _FavoriteButton extends StatelessWidget {
+  const _FavoriteButton({required this.isFavorite, required this.onPressed});
+
+  final bool isFavorite;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withOpacity(0.35),
+      shape: const CircleBorder(),
+      child: IconButton(
+        icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border),
+        color: isFavorite ? Colors.pinkAccent : Colors.white,
+        onPressed: onPressed,
+        tooltip: isFavorite
+            ? AppLocalizations.of(context).t('catalog.favorite_added')
+            : AppLocalizations.of(context).t('catalog.favorite_add'),
+      ),
+    );
+  }
+}
+
+class ResponsiveBreakpoints {
+  static int columns(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    if (width >= 1100) return 4;
+    if (width >= 800) return 3;
+    return 2;
+  }
+}
+
+String _statusText(Pod pod, AppLocalizations strings) {
+  final level = pod.waterLevelPercent;
+  if (level < 0.4) return strings.t('common.status.low');
+  if (level < 0.7) return strings.t('common.status.medium');
+  return strings.t('common.status.full');
+}
