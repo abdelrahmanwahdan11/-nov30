@@ -129,20 +129,6 @@ class SettingsPage extends StatelessWidget {
               subtitle: Text(strings.t('settings.export_desc')),
               onTap: () => _copySnapshot(context, strings),
             ),
-            ListTile(
-              leading: const Icon(IconlyLight.play),
-              title: Text(strings.t('settings.onboarding_title')),
-              subtitle: Text(strings.t('settings.onboarding_subtitle')),
-              trailing: const Icon(Icons.refresh),
-              onTap: () async {
-                await appController.resetOnboarding();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(strings.t('settings.onboarding_reset'))),
-                  );
-                }
-              },
-            ),
             ElevatedButton.icon(
               onPressed: () async {
                 await appController.clearPreferences();

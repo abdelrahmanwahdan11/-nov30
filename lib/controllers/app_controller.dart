@@ -12,7 +12,6 @@ class AppController extends ChangeNotifier {
   static const _colorKey = 'primary_color';
   static const _localeKey = 'locale';
   static const _alertsKey = 'alerts_enabled';
-  static const _onboardingKey = 'onboarding_complete';
   static const _tabKey = 'last_tab';
   static const _textScaleKey = 'text_scale';
 
@@ -22,7 +21,6 @@ class AppController extends ChangeNotifier {
   Locale _locale = const Locale('en');
   bool _initialized = false;
   bool _alertsEnabled = true;
-  bool _onboardingComplete = false;
   int _lastTabIndex = 0;
   double _textScaleFactor = 1.0;
 
@@ -31,7 +29,6 @@ class AppController extends ChangeNotifier {
   Locale get locale => _locale;
   bool get initialized => _initialized;
   bool get alertsEnabled => _alertsEnabled;
-  bool get onboardingComplete => _onboardingComplete;
   int get lastTabIndex => _lastTabIndex;
   double get textScaleFactor => _textScaleFactor;
 
@@ -49,7 +46,6 @@ class AppController extends ChangeNotifier {
       _locale = Locale(localeCode);
     }
     _alertsEnabled = _prefs!.getBool(_alertsKey) ?? true;
-    _onboardingComplete = _prefs!.getBool(_onboardingKey) ?? false;
     _lastTabIndex = _prefs!.getInt(_tabKey) ?? 0;
     _textScaleFactor = _prefs!.getDouble(_textScaleKey) ?? 1.0;
     _initialized = true;
@@ -105,34 +101,18 @@ class AppController extends ChangeNotifier {
     await prefs.setDouble(_textScaleKey, _textScaleFactor);
   }
 
-  Future<void> completeOnboarding() async {
-    _onboardingComplete = true;
-    notifyListeners();
-    final prefs = await _ensurePrefs();
-    await prefs.setBool(_onboardingKey, true);
-  }
-
-  Future<void> resetOnboarding() async {
-    _onboardingComplete = false;
-    notifyListeners();
-    final prefs = await _ensurePrefs();
-    await prefs.setBool(_onboardingKey, false);
-  }
-
   Future<void> clearPreferences() async {
     final prefs = await _ensurePrefs();
     await prefs.remove(_themeKey);
     await prefs.remove(_colorKey);
     await prefs.remove(_localeKey);
     await prefs.remove(_alertsKey);
-    await prefs.remove(_onboardingKey);
     await prefs.remove(_tabKey);
     await prefs.remove(_textScaleKey);
     _themeMode = ThemeMode.system;
     _primaryColor = const Color(0xFF909D92);
     _locale = const Locale('en');
     _alertsEnabled = true;
-    _onboardingComplete = false;
     _lastTabIndex = 0;
     _textScaleFactor = 1.0;
     notifyListeners();

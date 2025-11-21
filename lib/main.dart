@@ -3,7 +3,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'controllers/app_controller.dart';
 import 'l10n/app_localizations.dart';
-import 'pages/onboarding_page.dart';
 import 'pages/auth/login_page.dart';
 import 'pages/auth/signup_page.dart';
 import 'pages/auth/forgot_page.dart';
@@ -34,7 +33,6 @@ class _WaterPodAppState extends State<WaterPodApp> {
         if (!controller.initialized) {
           return const MaterialApp(home: SizedBox());
         }
-        final initialRoute = controller.onboardingComplete ? '/auth/login' : '/onboarding';
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'WaterPod',
@@ -57,14 +55,13 @@ class _WaterPodAppState extends State<WaterPodApp> {
             );
           },
           routes: {
-            '/onboarding': (context) => OnboardingPage(appController: controller),
             '/auth/login': (context) => LoginPage(controller: controller),
             '/auth/signup': (context) => const SignUpPage(),
             '/auth/forgot': (context) => const ForgotPasswordPage(),
             '/auth/verify': (context) => const VerifyAccountPage(),
             '/shell': (context) => ShellPage(appController: controller),
           },
-          initialRoute: initialRoute,
+          initialRoute: '/auth/login',
         );
       },
     );
