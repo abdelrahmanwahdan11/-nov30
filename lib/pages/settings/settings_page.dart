@@ -58,6 +58,23 @@ class SettingsPage extends StatelessWidget {
                 ],
               ),
             ),
+            ListTile(
+              leading: const Icon(IconlyLight.paper),
+              title: Text(strings.t('settings.text_size')),
+              subtitle: Text(strings.t('settings.text_size_desc')),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              trailing: Text('${(appController.textScaleFactor * 100).round()}%'),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Slider(
+                min: 0.9,
+                max: 1.3,
+                divisions: 8,
+                value: appController.textScaleFactor,
+                onChanged: appController.updateTextScale,
+              ),
+            ),
             const SizedBox(height: 12),
             Text(strings.t('settings.color')),
             Wrap(

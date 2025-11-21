@@ -48,6 +48,13 @@ class _WaterPodAppState extends State<WaterPodApp> {
             GlobalCupertinoLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
           ],
+          builder: (context, child) {
+            final media = MediaQuery.of(context);
+            return MediaQuery(
+              data: media.copyWith(textScaleFactor: controller.textScaleFactor),
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
           routes: {
             '/onboarding': (context) => OnboardingPage(appController: controller),
             '/auth/login': (context) => LoginPage(controller: controller),

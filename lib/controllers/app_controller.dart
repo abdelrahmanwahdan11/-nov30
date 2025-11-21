@@ -14,6 +14,7 @@ class AppController extends ChangeNotifier {
   static const _alertsKey = 'alerts_enabled';
   static const _onboardingKey = 'onboarding_complete';
   static const _tabKey = 'last_tab';
+  static const _textScaleKey = 'text_scale';
 
   ThemeMode _themeMode = ThemeMode.system;
   Color _primaryColor = const Color(0xFF909D92);
@@ -22,6 +23,7 @@ class AppController extends ChangeNotifier {
   bool _alertsEnabled = true;
   bool _onboardingComplete = false;
   int _lastTabIndex = 0;
+  double _textScaleFactor = 1.0;
 
   ThemeMode get themeMode => _themeMode;
   Color get primaryColor => _primaryColor;
@@ -30,6 +32,7 @@ class AppController extends ChangeNotifier {
   bool get alertsEnabled => _alertsEnabled;
   bool get onboardingComplete => _onboardingComplete;
   int get lastTabIndex => _lastTabIndex;
+  double get textScaleFactor => _textScaleFactor;
 
   Future<void> _init() async {
     final prefs = await SharedPreferences.getInstance();
@@ -45,6 +48,7 @@ class AppController extends ChangeNotifier {
     _alertsEnabled = prefs.getBool(_alertsKey) ?? true;
     _onboardingComplete = prefs.getBool(_onboardingKey) ?? false;
     _lastTabIndex = prefs.getInt(_tabKey) ?? 0;
+    _textScaleFactor = prefs.getDouble(_textScaleKey) ?? 1.0;
     _initialized = true;
     notifyListeners();
   }
@@ -84,6 +88,13 @@ class AppController extends ChangeNotifier {
     await prefs.setInt(_tabKey, index);
   }
 
+  Future<void> updateTextScale(double factor) async {
+    _textScaleFactor = factor.clamp(0.9, 1.3);
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_textScaleKey, _textScaleFactor);
+  }
+
   Future<void> completeOnboarding() async {
     _onboardingComplete = true;
     notifyListeners();
@@ -106,12 +117,14 @@ class AppController extends ChangeNotifier {
     await prefs.remove(_alertsKey);
     await prefs.remove(_onboardingKey);
     await prefs.remove(_tabKey);
+    await prefs.remove(_textScaleKey);
     _themeMode = ThemeMode.system;
     _primaryColor = const Color(0xFF909D92);
     _locale = const Locale('en');
     _alertsEnabled = true;
     _onboardingComplete = false;
     _lastTabIndex = 0;
+    _textScaleFactor = 1.0;
     notifyListeners();
   }
 }
